@@ -233,11 +233,15 @@ func lastSaid(msgs []piai.Message) string {
 }
 
 // aiTools are the assistant's tools, rooted at the window's folder, with
-// the panel asked before each write.
+// the panel asked before each write and, when the user allowed commands,
+// each one of those too.
 func (a *app) aiTools() *ai.Tools {
 	t := &ai.Tools{Root: a.root}
 	if !a.settings.AI.ApproveEdits {
 		t.Approve = a.askApproval
+	}
+	if a.settings.AI.AllowBash {
+		t.Exec = ai.Sh
 	}
 	return t
 }
@@ -475,8 +479,14 @@ func (a *app) aiApprovalCard(c *ui.Context) {
 	}
 	ui.Column(c.Key("ai-approval")).Margin(6).Padding(8).Gap(6).Radius(6).
 		Background(p.surface).Border(1, p.border).Children(func() {
-		ui.Text(c, locales.AiApproveTitle()).FontSize(11).FontWeight(600).TextColor(p.muted).SingleLine()
-		ui.Text(c, filepath.Base(ap.change.Path)).FontSize(12.5).TextColor(p.text).SingleLine()
+		// A command has the line it runs; a write has the lines it changes.
+		if ap.change.Command != "" {
+			ui.Text(c, locales.AiApproveRunTitle()).FontSize(11).FontWeight(600).TextColor(p.muted).SingleLine()
+			ui.Text(c, ap.change.Command).FontSize(12).TextColor(p.text)
+		} else {
+			ui.Text(c, locales.AiApproveTitle()).FontSize(11).FontWeight(600).TextColor(p.muted).SingleLine()
+			ui.Text(c, filepath.Base(ap.change.Path)).FontSize(12.5).TextColor(p.text).SingleLine()
+		}
 		if d := changedLines(ap.change.Before, ap.change.After); d != "" {
 			ui.Scroll(c.Key("ai-approval-diff")).MaxHeight(160).Children(func() {
 				for _, line := range strings.Split(d, "\n") {

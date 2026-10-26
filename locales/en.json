@@ -252,6 +252,8 @@
   "agoMonths": "{count, plural, one {# month ago} other {# months ago}}",
   "agoYears": "{count, plural, one {# year ago} other {# years ago}}",
   "aiApprove": "Approve",
+  "aiApproveRun": "Run",
+  "aiApproveRunTitle": "The assistant wants to run",
   "aiApproveTitle": "The assistant wants to change",
   "aiChatFailed": "The assistant failed: {error}",
   "aiEmpty": "Ask about the code in this folder.",

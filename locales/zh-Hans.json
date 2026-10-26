@@ -9,6 +9,8 @@
   "agoMonths": "{count} 个月前",
   "agoYears": "{count} 年前",
   "aiApprove": "允许",
+  "aiApproveRun": "运行",
+  "aiApproveRunTitle": "助手想运行",
   "aiApproveTitle": "助手想改动",
   "aiChatFailed": "助手出错了：{error}",
   "aiEmpty": "问问这个文件夹里的代码。",

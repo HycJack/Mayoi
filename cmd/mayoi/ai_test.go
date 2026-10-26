@@ -357,3 +357,115 @@ func saidBy(t *testing.T, r agent.AgentToolResult) string {
 	}
 	return sb.String()
 }
+
+func TestThePanelShowsTheToolsThatRan(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		onStep(ai.Step{Message: "reading"})
+		onStep(ai.Step{ToolCalls: []string{"read"}})
+		onStep(ai.Step{ToolCalls: []string{"glob"}})
+		onStep(ai.Step{Message: " done"})
+		return nil, nil
+	}
+	hs.ask("look")
+	last := a.ai.msgs[len(a.ai.msgs)-1]
+	if strings.Join(last.tools, " ") != "read glob" {
+		t.Errorf("the tools are %q", last.tools)
+	}
+	if !hs.tt.HasText("Ran read, glob") {
+		t.Errorf("the tools are not shown: %q", hs.tt.Texts())
+	}
+	if last.text != "reading done" {
+		t.Errorf("the answer is %q", last.text)
+	}
+}
+
+func TestARunThatRunsOutOfStepsSaysSo(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		onStep(ai.Step{OutOfSteps: true})
+		return nil, nil
+	}
+	hs.ask("keep going")
+	if !a.ai.outOfSteps {
+		t.Error("the panel does not know the run ran out of steps")
+	}
+	if !hs.tt.HasText("24 steps") {
+		t.Errorf("it is not shown: %q", hs.tt.Texts())
+	}
+}
+
+func TestCommandsComeOnlyWhenTheyAreAllowed(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	var had bool
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		for _, tool := range r.Tools {
+			had = had || tool.Name == "bash"
+		}
+		return nil, nil
+	}
+	hs.ask("run the tests")
+	if had {
+		t.Error("bash is offered without ai.allowBash")
+	}
+
+	a.settings.AI.AllowBash = true
+	had = false
+	hs.tt.Type("and now run them")
+	hs.settle()
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	hs.settle()
+	if !had {
+		t.Error("bash is not offered with ai.allowBash")
+	}
+}
+
+func TestTheCardShowsTheCommandToRun(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.settings.AI.AllowBash = true
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		for _, tool := range r.Tools {
+			if tool.Name != "bash" {
+				continue
+			}
+			tool.Execute(ctx, "call-1", json.RawMessage(`{"command": "go test ./..."}`), nil)
+		}
+		return nil, nil
+	}
+	a.toggleAI()
+	hs.settle()
+	hs.tt.Type("run the tests")
+	hs.settle()
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	for i := 0; i < 200 && a.ai.approval == nil; i++ {
+		step(hs.tt)
+	}
+	if a.ai.approval == nil {
+		t.Fatal("no approval card")
+	}
+	if !hs.tt.HasText("go test ./...") {
+		t.Errorf("the card does not show the command: %q", hs.tt.Texts())
+	}
+	if err := hs.tt.Click(locales.AiApprove()); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 20; i++ {
+		step(hs.tt)
+	}
+}

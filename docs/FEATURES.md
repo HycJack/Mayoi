@@ -406,6 +406,13 @@ settings name, no key at all, or a model the provider does not offer. API keys a
 account syncs: they live in `ai-keys.json` beside it, one key per provider. The file is written as
 `{"anthropic": "sk-..."}`.
 
+The assistant works on the folder through tools: `read` a file with its lines, `glob` for the paths, `grep` for the text,
+`write` and `edit` to change a file, `open_file` to show one in the editor at a line, and `bash` to run a command, which
+is offered only with `ai.allowBash`. A write arrives as a card with the lines it adds and removes: **Approve** writes
+them, **Reject** tells the model it was refused. `ai.approveEdits` writes without asking. A tool the model called shows
+under the answer, a run that ran 24 steps says so, and a written file reloads in its tab unless that tab has unsaved
+changes.
+
 ## Quick open
 
 ⌘P, or the search box in the title bar, opens a fuzzy file search with recent files first. In a Git work tree it lists

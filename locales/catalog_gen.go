@@ -275,6 +275,26 @@ func (msgs Messages) AiApprove() string {
 	return Catalog.Format(msgs.locale, "aiApprove", nil)
 }
 
+// AiApproveRun says "Run"
+// in the language the app shows.
+func AiApproveRun() string { return In(i18n.Locale()).AiApproveRun() }
+
+// AiApproveRun says "Run"
+// in the language of msgs.
+func (msgs Messages) AiApproveRun() string {
+	return Catalog.Format(msgs.locale, "aiApproveRun", nil)
+}
+
+// AiApproveRunTitle says "The assistant wants to run"
+// in the language the app shows.
+func AiApproveRunTitle() string { return In(i18n.Locale()).AiApproveRunTitle() }
+
+// AiApproveRunTitle says "The assistant wants to run"
+// in the language of msgs.
+func (msgs Messages) AiApproveRunTitle() string {
+	return Catalog.Format(msgs.locale, "aiApproveRunTitle", nil)
+}
+
 // AiApproveTitle says "The assistant wants to change"
 // in the language the app shows.
 func AiApproveTitle() string { return In(i18n.Locale()).AiApproveTitle() }

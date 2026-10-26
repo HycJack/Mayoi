@@ -9,6 +9,8 @@
   "agoMonths": "{count} か月前",
   "agoYears": "{count} 年前",
   "aiApprove": "許可",
+  "aiApproveRun": "実行",
+  "aiApproveRunTitle": "アシスタントが実行を求めています",
   "aiApproveTitle": "アシスタントが変更を求めています",
   "aiChatFailed": "アシスタントが失敗しました：{error}",
   "aiEmpty": "このフォルダーのコードについて聞いてください。",

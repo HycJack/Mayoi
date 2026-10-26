@@ -182,3 +182,55 @@ func TestAWriteOutsideTheFolderIsRefused(t *testing.T) {
 		t.Error("a write escaped the folder")
 	}
 }
+
+func TestBashIsNotOfferedUnlessCommandsAreAllowed(t *testing.T) {
+	tools := &Tools{Root: aFolder(t)}
+	for _, tool := range tools.Sets() {
+		if tool.Name == "bash" {
+			t.Fatal("bash is offered with no Exec")
+		}
+	}
+	tools.Exec = func(ctx context.Context, dir, command string) (string, error) { return "ok", nil }
+	var found bool
+	for _, tool := range tools.Sets() {
+		found = found || tool.Name == "bash"
+	}
+	if !found {
+		t.Error("bash is not offered with an Exec")
+	}
+}
+
+func TestBashAsksWithTheCommand(t *testing.T) {
+	var asked Change
+	tools := &Tools{
+		Root:    aFolder(t),
+		Approve: func(c Change) bool { asked = c; return true },
+		Exec:    func(ctx context.Context, dir, command string) (string, error) { return "hi\n", nil },
+	}
+	got, err := tools.Bash(context.Background(), "call-1", json.RawMessage(`{"command": "echo hi"}`), nil)
+	if err != nil || got.IsError {
+		t.Fatalf("bash: %v %+v", err, got)
+	}
+	if asked.Command != "echo hi" {
+		t.Errorf("asked %+v", asked)
+	}
+	if !strings.Contains(said(t, got), "hi") {
+		t.Errorf("bash said %q", said(t, got))
+	}
+}
+
+func TestARejectedCommandRunsNothing(t *testing.T) {
+	var ran bool
+	tools := &Tools{
+		Root:    aFolder(t),
+		Approve: func(Change) bool { return false },
+		Exec:    func(ctx context.Context, dir, command string) (string, error) { ran = true; return "", nil },
+	}
+	got, _ := tools.Bash(context.Background(), "call-1", json.RawMessage(`{"command": "rm -rf /"}`), nil)
+	if ran {
+		t.Error("a rejected command ran")
+	}
+	if !strings.Contains(said(t, got), "rejected") {
+		t.Errorf("bash said %+v", got)
+	}
+}

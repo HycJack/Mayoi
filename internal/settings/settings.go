@@ -209,6 +209,9 @@ type AISettings struct {
 	// ApproveEdits writes what the assistant asks without a card, as the
 	// user asked once and for all.
 	ApproveEdits bool `json:"approveEdits,omitempty"`
+	// AllowBash lets the assistant run commands in the folder, each one
+	// approved first unless ApproveEdits is set.
+	AllowBash bool `json:"allowBash,omitempty"`
 }
 
 // TabStyle is a project's own look on the rail: Label, up to two

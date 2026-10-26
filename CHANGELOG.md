@@ -7,6 +7,9 @@ needs a `## <version>` section here, or its build fails.
 
 - The **AI Assistant** panel sits at the right of the window: **View → AI Assistant**, or `Alt+CmdOrCtrl+A`.
 - Ask about the code of the folder; the answer streams in, and **Stop** or `Esc` ends it.
+- The assistant reads, searches and edits the folder, and opens the file it explains at its line.
+- A write comes as a card with the changed lines: **Approve** writes them, **Reject** sends them back.
+- `ai.approveEdits` writes without asking first, and `ai.allowBash` lets the assistant run commands, each approved.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
 - `ai.provider` and `ai.model` choose the model; a missing key or an unknown model says which it was.
 

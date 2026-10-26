@@ -25,6 +25,9 @@ type Tools struct {
 	Root string
 	// Approve is asked before a write, nil to allow every one.
 	Approve func(Change) bool
+	// Exec runs a command in the folder, nil when commands are not
+	// allowed, and then bash is not offered at all.
+	Exec func(ctx context.Context, dir, command string) (string, error)
 
 	mu      sync.Mutex
 	written []string
@@ -44,10 +47,49 @@ func (t *Tools) kept(path string) {
 	t.written = append(t.written, path)
 }
 
-// Sets is every tool the folder allows: the ones that read it and the
-// ones that write it.
+// Sets is every tool the folder allows: the ones that read it, the ones
+// that write it, and the command runner when there is one.
 func (t *Tools) Sets() []agent.AgentTool {
-	return append(t.ReadSet(), t.WriteSet()...)
+	tools := append(t.ReadSet(), t.WriteSet()...)
+	if t.Exec == nil {
+		return tools
+	}
+	return append(tools, agent.AgentTool{
+		Name:        "bash",
+		Description: "Run a shell command in the folder and read what it printed.",
+		Label:       "Run",
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}`),
+		Execute:     t.Bash,
+	})
+}
+
+// BashParams is what bash is asked: the command line to run.
+type BashParams struct {
+	Command string `json:"command"`
+}
+
+// Bash runs a command in the folder, once the user allowed it.
+func (t *Tools) Bash(ctx context.Context, id string, params json.RawMessage, onUpdate func(json.RawMessage)) (agent.AgentToolResult, error) {
+	var p BashParams
+	if err := json.Unmarshal(params, &p); err != nil {
+		return failure(err), nil
+	}
+	if strings.TrimSpace(p.Command) == "" {
+		return failure(errors.New("no command to run")), nil
+	}
+	if told, ok := t.approved(Change{Path: t.Root, Command: p.Command}); !ok {
+		return told, nil
+	}
+	out, err := t.Exec(ctx, t.Root, p.Command)
+	switch {
+	case err != nil && out == "":
+		return failure(err), nil
+	case err != nil:
+		return text(out + "\n" + err.Error()), nil
+	case out == "":
+		return text("the command printed nothing"), nil
+	}
+	return text(out), nil
 }
 
 // Change is what the assistant wants to do that the user must allow: a
