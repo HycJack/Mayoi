@@ -276,9 +276,6 @@ func (a *app) aiCompose(c *ui.Context) {
 		if in.Submitted() {
 			a.post(a.send)
 		}
-		if in.Changed() {
-			ai.keyed.Focus()
-		}
 	})
 }
 
