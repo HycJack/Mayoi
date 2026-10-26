@@ -33,3 +33,5 @@ require (
 )
 
 replace github.com/egoist/mygo => github.com/sorrycc/mygo v0.4.9-0.20261022125358-4bd079439ee7
+
+replace github.com/HycJack/pi-ai-go => ../../pi-ai-go
