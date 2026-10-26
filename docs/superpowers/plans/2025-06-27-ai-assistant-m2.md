@@ -1411,9 +1411,288 @@ git commit -m "Show the assistant's tools and its edits"
 
 ---
 
+### Task 8: A command, when the user turns it on
+
+`bash` runs anything, so it is off until `AI.AllowBash` is set, and then each command is still approved on a card, which shows the command rather than a diff.
+
+**Files:**
+- Modify: `internal/ai/tools.go` (`Change` gains `Command`; add `BashParams`, and an `Exec` field)
+- Create: `internal/ai/shell.go` (`Run` spawns the command)
+- Test: `internal/ai/tools_test.go`, `internal/ai/shell_test.go`
+- Modify: `cmd/mayoi/ai.go` (`aiTools` adds `bash` when it is allowed; the card shows a command)
+- Modify: `internal/settings/settings.go` (`AISettings.AllowBash`)
+- Modify: `locales/en.json`, `locales/ja.json`, `locales/zh-Hans.json` (`aiApproveRun`, `aiApproveRunTitle`)
+- Modify: `cmd/mayoi/ai_test.go`, `CHANGELOG.md`, `docs/FEATURES.md`, `docs/SETTINGS.md`
+
+**Interfaces:**
+- Consumes: `Tools.Approve` from Task 2, `(*app).answered` from Task 5.
+- Produces:
+  - `type Tools struct { Root string; Approve func(Change) bool; Exec func(ctx context.Context, dir, command string) (string, error) }` — `Exec` is nil when commands are not allowed, and then `bash` is not in the set at all.
+  - `BashParams struct { Command string `json:"command"` }`; `func (t *Tools) Bash(...)` named `"bash"`.
+  - `Change.Command string` — set for a command, empty for a write.
+  - `func Run(ctx context.Context, dir, command string) (string, error)` in `internal/ai` — the shell's output, standard error included, at most 64 KB, 60 seconds.
+  - `AISettings.AllowBash bool` (`json:"allowBash,omitempty"`), default false.
+
+- [ ] **Step 1: Write the failing test**
+
+```go
+func TestBashIsNotOfferedUnlessCommandsAreAllowed(t *testing.T) {
+	tools := &Tools{Root: aFolder(t)}
+	for _, tool := range tools.Sets() {
+		if tool.Name == "bash" {
+			t.Fatal("bash is offered with no Exec")
+		}
+	}
+	tools.Exec = func(ctx context.Context, dir, command string) (string, error) { return "ok", nil }
+	var found bool
+	for _, tool := range tools.Sets() {
+		found = found || tool.Name == "bash"
+	}
+	if !found {
+		t.Error("bash is not offered with an Exec")
+	}
+}
+
+func TestBashAsksWithTheCommand(t *testing.T) {
+	var asked Change
+	tools := &Tools{
+		Root:    aFolder(t),
+		Approve: func(c Change) bool { asked = c; return true },
+		Exec:    func(ctx context.Context, dir, command string) (string, error) { return "hi\n", nil },
+	}
+	got, err := tools.Bash(context.Background(), "call-1", json.RawMessage(`{"command": "echo hi"}`), nil)
+	if err != nil || got.IsError {
+		t.Fatalf("bash: %v %+v", err, got)
+	}
+	if asked.Command != "echo hi" {
+		t.Errorf("asked %+v", asked)
+	}
+	if !strings.Contains(said(t, got), "hi") {
+		t.Errorf("bash said %q", said(t, got))
+	}
+}
+
+func TestARejectedCommandRunsNothing(t *testing.T) {
+	var ran bool
+	tools := &Tools{
+		Root:    aFolder(t),
+		Approve: func(Change) bool { return false },
+		Exec:    func(ctx context.Context, dir, command string) (string, error) { ran = true; return "", nil },
+	}
+	got, _ := tools.Bash(context.Background(), "call-1", json.RawMessage(`{"command": "rm -rf /"}`), nil)
+	if ran {
+		t.Error("a rejected command ran")
+	}
+	if !strings.Contains(said(t, got), "rejected") {
+		t.Errorf("bash said %+v", got)
+	}
+}
+```
+
+```go
+func TestRunSaysWhatTheCommandSaid(t *testing.T) {
+	out, err := Run(context.Background(), t.TempDir(), "echo hello")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "hello") {
+		t.Errorf("run said %q", out)
+	}
+}
+
+func TestRunReportsAFailure(t *testing.T) {
+	_, err := Run(context.Background(), t.TempDir(), "exit 3")
+	if err == nil {
+		t.Error("a failing command reported success")
+	}
+}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `go test ./internal/ai -run 'TestBash|TestRun|TestARejectedCommand'`
+Expected: FAIL with "tools.Sets undefined", "undefined: Run"
+
+- [ ] **Step 3: Write minimal implementation**
+
+In `internal/ai/tools.go`:
+
+```go
+// BashParams is what bash is asked: the command line to run.
+type BashParams struct {
+	Command string `json:"command"`
+}
+
+// Sets is every tool the folder allows: the read ones, the writing ones,
+// and the command runner when there is one.
+func (t *Tools) Sets() []piai.AgentTool {
+	tools := append(t.ReadSet(), t.WriteSet()...)
+	if t.Exec == nil {
+		return tools
+	}
+	return append(tools, piai.AgentTool{
+		Name:        "bash",
+		Description: "Run a shell command in the folder and read what it prints.",
+		Label:       "Run",
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}`),
+		Execute:     t.Bash,
+	})
+}
+
+// Bash runs a command in the folder, once the user allowed it.
+func (t *Tools) Bash(ctx context.Context, id string, params json.RawMessage, onUpdate func(json.RawMessage)) (piai.AgentToolResult, error) {
+	var p BashParams
+	if err := json.Unmarshal(params, &p); err != nil {
+		return failure(err), nil
+	}
+	if p.Command == "" {
+		return failure(errors.New("no command to run")), nil
+	}
+	if told, ok := t.approved(Change{Path: t.Root, Command: p.Command}); !ok {
+		return told, nil
+	}
+	out, err := t.Exec(ctx, t.Root, p.Command)
+	if err != nil {
+		if out != "" {
+			return text(out + "\n" + err.Error()), nil
+		}
+		return failure(err), nil
+	}
+	if out == "" {
+		return text("the command printed nothing"), nil
+	}
+	return text(out), nil
+}
+```
+
+and `Change` gains:
+
+```go
+	// Command is the command line a change runs, empty for a write.
+	Command string
+```
+
+In `internal/ai/shell.go`:
+
+```go
+package ai
+
+import (
+	"context"
+	"fmt"
+	"os/exec"
+	"runtime"
+	"strings"
+	"time"
+)
+
+// maxOutput is how much of a command's output the model reads.
+const maxOutput = 64 << 10
+
+// shellTimeout is how long a command may run.
+const shellTimeout = 60 * time.Second
+
+// Run runs a command in dir and returns what it printed, standard error
+// included, at most maxOutput of it.
+func Run(ctx context.Context, dir, command string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, shellTimeout)
+	defer cancel()
+	var c *exec.Cmd
+	if runtime.GOOS == "windows" {
+		c = exec.CommandContext(ctx, "cmd", "/c", command)
+	} else {
+		c = exec.CommandContext(ctx, "sh", "-c", command)
+	}
+	c.Dir = dir
+	out, err := c.CombinedOutput()
+	s := string(out)
+	if len(s) > maxOutput {
+		s = s[:maxOutput] + "\n…"
+	}
+	if err != nil {
+		return strings.TrimSpace(s), fmt.Errorf("%s: %w", strings.TrimSpace(err.Error()), err)
+	}
+	return strings.TrimSpace(s), nil
+}
+```
+
+Wait — that error wraps itself twice; simplify: return s, err with the output the caller prints. Let me make `Run` return the output and a plain error:
+
+```go
+	if err != nil {
+		return strings.TrimSpace(s), err
+	}
+```
+
+Then `Bash` combines output and error. Good; the test only needs a non-nil error.
+
+In `internal/settings/settings.go`, in `AISettings`:
+
+```go
+	// AllowBash lets the assistant run commands, each one approved.
+	AllowBash bool `json:"allowBash,omitempty"`
+```
+
+In `cmd/mayoi/ai.go`, `aiTools`:
+
+```go
+func (a *app) aiTools() *ai.Tools {
+	t := &ai.Tools{Root: a.root}
+	if !a.settings.AI.ApproveEdits {
+		t.Approve = a.askApproval
+	}
+	if a.settings.AI.AllowBash {
+		t.Exec = ai.Run
+	}
+	return t
+}
+```
+
+and in the card, the command instead of the diff, with its own title:
+
+```go
+		title := locales.AiApproveTitle()
+		if ap.change.Command != "" {
+			title = locales.AiApproveRunTitle()
+		}
+		ui.Text(c, title).FontSize(11).FontWeight(600).TextColor(p.muted).SingleLine()
+		if ap.change.Command != "" {
+			ui.Text(c, ap.change.Command).FontSize(11.5).TextColor(p.text)
+		} else {
+			ui.Text(c, filepath.Base(ap.change.Path)).FontSize(12.5).TextColor(p.text).SingleLine()
+		}
+```
+
+Locale keys (all three catalogs):
+
+```json
+  "aiApproveRun": "Run",
+  "aiApproveRunTitle": "The assistant wants to run",
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `go tool mygo generate && go test ./internal/ai && go test ./cmd/mayoi -run 'TestTheAssistant|TestAssistant|TestStopping|TestRejecting'`
+Expected: PASS
+
+- [ ] **Step 5: Update the CHANGELOG and the docs**
+
+```markdown
+- `ai.allowBash` lets the assistant run commands; each one asks first, with the command on the card.
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add -A
+git commit -m "Let the assistant run a command the user allows"
+```
+
+---
+
 ## Self-Review
 
-**Spec coverage:** §3's three tiers — read tools (Task 1), approved writes (Tasks 2 and 5), `bash` left for M4 by decision of this plan's scope line — plus `open_file` (Task 6) and the 24-step cap (Task 3). §4's tool cards (Task 7) and approval cards with a diff (Task 5). §7's errors: every tool failure is a result the model reads, and a failed write is a toast (Task 2). §5's sessions and §6's personas are M3 and M4, as the spec's milestone list says.
+**Spec coverage:** §3's three tiers — read tools (Task 1), approved writes (Tasks 2 and 5), a `bash` tool off by default behind `AI.AllowBash` and approved per command (Task 8) — plus `open_file` (Task 6) and the 24-step cap (Task 3). §4's tool cards (Task 7) and approval cards with a diff (Task 5). §7's errors: every tool failure is a result the model reads, and a failed write is a toast (Task 2). §5's sessions and §6's personas are M3 and M4, as the spec's milestone list says.
 
 **Placeholders:** none — every step carries the code and the command it runs.
 
