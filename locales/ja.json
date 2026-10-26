@@ -15,10 +15,23 @@
   "aiLimitReached": "AI の上限に達しました：{reason}",
   "aiLimitSoon": "AI へのリクエストが多すぎます。{count} 秒後にもう一度お試しください。",
   "aiNoKey": "ai-keys.json にプロバイダーの API key を追加すると対話できます。",
+  "@aiNoKeyFor": {
+    "placeholders": {
+      "provider": {}
+    }
+  },
+  "aiNoKeyFor": "ai-keys.json に {provider} の API key を追加してください。設定が指定しています。",
   "aiPlaceholder": "アシスタントに聞く",
   "aiStop": "停止",
+  "aiStopped": "停止しました。",
   "aiTimedOut": "AI の応答に時間がかかりすぎました。もう一度お試しください。",
   "aiTitle": "AI",
+  "@aiUnknownModel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "aiUnknownModel": "{model} はアシスタントが知らないモデルです。",
   "aiYou": "あなた",
   "alertCaution": "注意",
   "alertImportant": "重要",

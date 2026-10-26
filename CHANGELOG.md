@@ -6,9 +6,9 @@ needs a `## <version>` section here, or its build fails.
 ## Unreleased
 
 - The **AI Assistant** panel sits at the right of the window: **View → AI Assistant**, or `Alt+CmdOrCtrl+A`.
-- Ask about the code of the folder; the answer streams in as it is written, and **Stop** ends it.
+- Ask about the code of the folder; the answer streams in, and **Stop** or `Esc` ends it.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
-- `ai.provider` and `ai.model` in `settings.json` choose the model; without them the first provider with a key answers.
+- `ai.provider` and `ai.model` choose the model; a missing key or an unknown model says which it was.
 
 ## 0.12.0
 

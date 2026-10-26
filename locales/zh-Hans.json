@@ -15,10 +15,23 @@
   "aiLimitReached": "已达到 AI 使用上限：{reason}",
   "aiLimitSoon": "AI 请求过于频繁，请在 {count} 秒后再试。",
   "aiNoKey": "在 ai-keys.json 里为提供者添加 API key 才能和助手对话。",
+  "@aiNoKeyFor": {
+    "placeholders": {
+      "provider": {}
+    }
+  },
+  "aiNoKeyFor": "请在 ai-keys.json 里为 {provider} 添加 API key：设置里指定的是它。",
   "aiPlaceholder": "问助手",
   "aiStop": "停止",
+  "aiStopped": "已停止。",
   "aiTimedOut": "AI 响应时间过长，请重试。",
   "aiTitle": "AI",
+  "@aiUnknownModel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "aiUnknownModel": "助手不认识 {model} 这个模型。",
   "aiYou": "你",
   "alertCaution": "小心",
   "alertImportant": "重要",

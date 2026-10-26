@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"strconv"
@@ -36,8 +37,11 @@ type aiPanel struct {
 	keyed ui.Handle
 	// writing is the answer under way, nil when the assistant is idle.
 	writing *aiReply
-	// err is the failure of the last answer.
+	// err is what the panel says of the last failure, ready to show.
 	err string
+	// shown says the panel has drawn itself once, so a window restored
+	// with it open gives it the keyboard.
+	shown bool
 }
 
 // aiMessage is a message of the conversation: whose it is, "user" or
@@ -45,21 +49,48 @@ type aiPanel struct {
 type aiMessage struct {
 	role string
 	text string
+	// stopped says the user stopped this answer before it said anything.
+	stopped bool
 }
 
-// aiReply is an answer under way: cancel stops it, and its identity
-// tells a newer answer from this one.
+// aiReply is an answer under way: cancel stops it, its identity tells a
+// newer answer from this one, and at is the place of its message in the
+// conversation.
 type aiReply struct {
 	ctx    context.Context
 	cancel context.CancelFunc
+	at     int
 }
 
-// cancel stops the answer under way.
+// cancel stops the answer under way. The answer keeps its place in the
+// conversation, marked when it said nothing: a delta still on its way
+// lands there, or nowhere.
 func (p *aiPanel) cancel() {
-	if w := p.writing; w != nil {
-		w.cancel()
-		p.writing = nil
+	w := p.writing
+	if w == nil {
+		return
 	}
+	w.cancel()
+	p.writing = nil
+	if w.at < len(p.msgs) && p.msgs[w.at].text == "" {
+		p.msgs[w.at].stopped = true
+	}
+}
+
+// aiSaid is what the panel says of a failure: the one it knows, in the
+// words of the locale, or the failure wrapped.
+func (a *app) aiSaid(err error) string {
+	var noKey aiNoKey
+	var unknown aiUnknownModel
+	switch {
+	case errors.As(err, &noKey) && noKey.wanted:
+		return locales.AiNoKeyFor(noKey.provider)
+	case errors.As(err, &noKey):
+		return locales.AiNoKey()
+	case errors.As(err, &unknown):
+		return locales.AiUnknownModel(unknown.provider + "/" + unknown.model)
+	}
+	return locales.AiChatFailed(err.Error())
 }
 
 // stop is the command that stops the answer under way.
@@ -91,18 +122,22 @@ func (a *app) send() {
 	}
 	model, key, err := a.target()
 	if err != nil {
-		p.err = err.Error()
+		p.err = a.aiSaid(err)
 		a.invalidate()
 		return
 	}
 	p.prompt, p.err = "", ""
+	// The keyboard comes back to the field once the answer is under way.
+	p.keyed.Focus()
 	p.msgs = append(p.msgs, aiMessage{role: "user", text: text})
 	answer := aiMessage{role: "assistant"}
 	p.msgs = append(p.msgs, answer)
+	// last stays the answer's place: the conversation only grows, so a
+	// delta of a stopped answer lands where it belongs, or nowhere.
 	last := len(p.msgs) - 1
 
 	ctx, cancel := context.WithCancel(context.Background())
-	w := &aiReply{ctx: ctx, cancel: cancel}
+	w := &aiReply{ctx: ctx, cancel: cancel, at: last}
 	p.writing = w
 	stream := a.stream
 	req := ai.Request{
@@ -113,18 +148,18 @@ func (a *app) send() {
 	}
 	bg.Go(func() {
 		defer recoverCrash()
-		// A stop is not a failure: the user asked for it.
+		// Only post from here: the panel's state belongs to the main
+		// thread, and the tools of a later milestone too.
 		_, err := stream(ctx, req, func(s string) {
 			a.post(func() {
 				if p.writing != w {
 					return
 				}
-				// The answer may have been dropped as empty already.
-				if last < len(p.msgs) {
-					p.msgs[last].text += s
-				}
+				p.msgs[last].text += s
 			})
 		})
+		// A stop is not a failure: the user asked for it. It was already
+		// marked where it stopped, and this answer's place stays.
 		stopped := ctx.Err() != nil
 		cancel()
 		a.post(func() {
@@ -133,10 +168,7 @@ func (a *app) send() {
 			}
 			p.writing = nil
 			if err != nil && !stopped {
-				p.err = err.Error()
-			}
-			if last < len(p.msgs) && p.msgs[last].text == "" {
-				p.msgs = p.msgs[:last]
+				p.err = a.aiSaid(err)
 			}
 		})
 	})
@@ -152,50 +184,64 @@ func spoken(msgs []aiMessage) []ai.Message {
 	return out
 }
 
-// aiTarget is the model the assistant asks, and its key: the one the
-// settings chose, or the first one keys were given for.
+// aiTarget is the model the assistant asks, and its key. The settings
+// name one; left empty, the first provider a key was given for answers,
+// with its first model. Every way of finding none says which it was.
 func (a *app) aiTarget() (piai.Model, string, error) {
 	keys, err := ai.LoadKeys(a.settings.AIPath())
 	if err != nil {
 		return piai.Model{}, "", err
 	}
 	want := a.settings.AI
-	var providers []string
 	if want.Provider != "" {
-		providers = []string{want.Provider}
-	} else {
-		for _, name := range ai.Providers() {
-			if keys[name] != "" {
-				providers = append(providers, name)
-			}
-		}
-		if len(providers) == 0 {
-			providers = ai.Providers()
-		}
-	}
-	for _, name := range providers {
-		model := want.Model
-		if model == "" {
-			if models := ai.Models(name); len(models) > 0 {
-				model = models[0].ID
-			}
-		}
-		if model == "" {
-			continue
-		}
-		m, err := ai.Resolve(name, model)
+		m, err := ai.Resolve(want.Provider, a.modelOf(want.Provider, want.Model))
 		if err != nil {
-			continue
+			return piai.Model{}, "", aiUnknownModel{provider: want.Provider, model: cmp.Or(want.Model, "its first model")}
 		}
+		key := keys[want.Provider]
+		if key == "" {
+			return piai.Model{}, "", aiNoKey{wanted: true, provider: want.Provider}
+		}
+		return m, key, nil
+	}
+	for _, name := range ai.Providers() {
 		if key := keys[name]; key != "" {
+			m, err := ai.Resolve(name, a.modelOf(name, want.Model))
+			if err != nil {
+				return piai.Model{}, "", aiUnknownModel{provider: name, model: want.Model}
+			}
 			return m, key, nil
 		}
 	}
-	return piai.Model{}, "", errAINoModel
+	return piai.Model{}, "", aiNoKey{}
 }
 
-// errAINoModel is the failure of a send with no model, or no key for one.
-var errAINoModel = errors.New("the assistant has no model: add a key for a provider to ai-keys.json")
+// modelOf is the model to ask a provider for: the one the settings name,
+// or the provider's first.
+func (a *app) modelOf(provider, model string) string {
+	if model != "" {
+		return model
+	}
+	if models := ai.Models(provider); len(models) > 0 {
+		return models[0].ID
+	}
+	return ""
+}
+
+// aiNoKey is the failure of a send with no key for its provider, wanted
+// when the settings name that provider.
+type aiNoKey struct {
+	wanted   bool
+	provider string
+}
+
+func (e aiNoKey) Error() string { return "no API key for " + e.provider }
+
+// aiUnknownModel is the failure of a send for a model the provider does
+// not offer.
+type aiUnknownModel struct{ provider, model string }
+
+func (e aiUnknownModel) Error() string { return "unknown model " + e.provider + "/" + e.model }
 
 // aiSidePanel is the assistant's panel, at the right edge of the window:
 // what it leaves for the editors and the sidebar is theirs, as the
@@ -212,28 +258,41 @@ func (a *app) aiSidePanel(c *ui.Context) {
 	}
 	room = max(room, aiMinW)
 	size := clamp(w.AIWidth, aiMinW, room)
-	box := ui.Column(c.Key("ai")).Shrink(0).Width(size).Background(p.panel).
+	box := ui.Column(c.Key("ai")).Shrink(0).Background(p.panel).
 		BorderWidth(0, 0, 0, 1).BorderColor(p.border)
+	// A panel maximized elsewhere in the window leaves the editors none,
+	// so the assistant takes what is left rather than a fixed width.
+	if a.panelMax {
+		box.Grow(1)
+	} else {
+		box.Width(size)
+	}
 	box.Children(func() {
+		if !a.ai.shown {
+			// A window restored with the panel open starts in it.
+			a.ai.shown = true
+			a.ai.keyed.Focus()
+		}
 		a.aiTitleRow(c)
 		a.aiTranscript(c)
 		if a.ai.err != "" {
-			ui.Text(c, locales.AiChatFailed(a.ai.err)).FontSize(12).TextColor(p.dangerText).
-				Padding(0, 10, 6, 10)
+			ui.Text(c, a.ai.err).FontSize(12).TextColor(p.dangerText).Padding(0, 10, 6, 10)
 		}
 		a.aiCompose(c)
-		a.splitter(c, edgeLeft, func(d float32) {
-			w.AIWidth = clamp(size-d, aiMinW, room)
-		})
+		if !a.panelMax {
+			a.splitter(c, edgeLeft, func(d float32) {
+				w.AIWidth = clamp(size-d, aiMinW, room)
+			})
+		}
 	})
 }
 
 // aiTitleRow is the head of the assistant's panel: its name.
 func (a *app) aiTitleRow(c *ui.Context) {
 	p := a.pal
-	ui.Row(c.Key("ai-head")).Height(panelHeadH).Padding(0, 10).Gap(6).AlignItems(ui.Center).
+	ui.Row(c.Key("ai-head")).Height(panelHeadH).Padding(0, 10, 0, 12).Gap(6).AlignItems(ui.Center).
 		Background(p.chrome).BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
-		ui.Text(c, locales.AiTitle()).FontSize(11).FontWeight(600).
+		ui.Text(c, locales.CmdViewAI()).FontSize(11).FontWeight(600).
 			LetterSpacing(titleSpacing).TextColor(p.text).Grow(1).SingleLine()
 		if a.ai.writing != nil && a.iconButton(c, iconStopSquare, locales.AiStop(), false).Clicked() {
 			a.stopAI()
@@ -256,7 +315,12 @@ func (a *app) aiTranscript(c *ui.Context) {
 			ui.Column(c.Key("ai-msg-"+strconv.Itoa(i))).Padding(6, 8).Gap(2).Children(func() {
 				ui.Text(c, aiRoleName(msg.role)).FontSize(10).FontWeight(600).LetterSpacing(titleSpacing).
 					TextColor(p.muted).SingleLine()
-				ui.Text(c, msg.text).FontSize(12.5).TextColor(p.text)
+				switch {
+				case msg.stopped:
+					ui.Text(c, locales.AiStopped()).FontSize(12.5).TextColor(p.muted)
+				case msg.text != "":
+					ui.Text(c, msg.text).FontSize(12.5).TextColor(p.text)
+				}
 			})
 		}
 	})
@@ -273,6 +337,10 @@ func (a *app) aiCompose(c *ui.Context) {
 		in := a.textKeys(ui.TextInputBase(c.Key("ai-input"), &ai.prompt)).Grow(1).MinWidth(0).
 			FontSize(12.5).Placeholder(placeholder).Label(placeholder)
 		in.Bind(&ai.keyed)
+		// Escape stops the answer under way, as Enter starts one.
+		if ai.writing != nil && in.Shortcut(0, ui.KeyEscape) {
+			a.post(a.stopAI)
+		}
 		if in.Submitted() {
 			a.post(a.send)
 		}

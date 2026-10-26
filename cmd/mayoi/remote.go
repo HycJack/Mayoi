@@ -630,6 +630,7 @@ func (a *app) shutdown() {
 	if a.tree != nil {
 		a.tree.Close()
 	}
+	a.ai.cancel()
 	a.detachRemote()
 	a.closeRemotePicker()
 }

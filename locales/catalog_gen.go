@@ -335,6 +335,16 @@ func (msgs Messages) AiNoKey() string {
 	return Catalog.Format(msgs.locale, "aiNoKey", nil)
 }
 
+// AiNoKeyFor says "Add an API key for {provider} to ai-keys.json: the settings name it."
+// in the language the app shows.
+func AiNoKeyFor(provider string) string { return In(i18n.Locale()).AiNoKeyFor(provider) }
+
+// AiNoKeyFor says "Add an API key for {provider} to ai-keys.json: the settings name it."
+// in the language of msgs.
+func (msgs Messages) AiNoKeyFor(provider string) string {
+	return Catalog.Format(msgs.locale, "aiNoKeyFor", map[string]any{"provider": provider})
+}
+
 // AiPlaceholder says "Ask the assistant"
 // in the language the app shows.
 func AiPlaceholder() string { return In(i18n.Locale()).AiPlaceholder() }
@@ -355,6 +365,16 @@ func (msgs Messages) AiStop() string {
 	return Catalog.Format(msgs.locale, "aiStop", nil)
 }
 
+// AiStopped says "Stopped."
+// in the language the app shows.
+func AiStopped() string { return In(i18n.Locale()).AiStopped() }
+
+// AiStopped says "Stopped."
+// in the language of msgs.
+func (msgs Messages) AiStopped() string {
+	return Catalog.Format(msgs.locale, "aiStopped", nil)
+}
+
 // AiTimedOut says "The AI took too long to answer. Try again."
 // in the language the app shows.
 func AiTimedOut() string { return In(i18n.Locale()).AiTimedOut() }
@@ -373,6 +393,16 @@ func AiTitle() string { return In(i18n.Locale()).AiTitle() }
 // in the language of msgs.
 func (msgs Messages) AiTitle() string {
 	return Catalog.Format(msgs.locale, "aiTitle", nil)
+}
+
+// AiUnknownModel says "{model} is not a model the assistant knows."
+// in the language the app shows.
+func AiUnknownModel(model string) string { return In(i18n.Locale()).AiUnknownModel(model) }
+
+// AiUnknownModel says "{model} is not a model the assistant knows."
+// in the language of msgs.
+func (msgs Messages) AiUnknownModel(model string) string {
+	return Catalog.Format(msgs.locale, "aiUnknownModel", map[string]any{"model": model})
 }
 
 // AiYou says "You"

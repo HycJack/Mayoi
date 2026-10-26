@@ -396,13 +396,15 @@ Ctrl+Shift shortcut but Ctrl+Shift+C and Ctrl+Shift+V, the terminal's copy and p
 
 **View → AI Assistant**, the command palette's **AI Assistant** or ⌥⌘A shows a panel at the right of the window: type
 what you want to know about the code of the folder, press Enter, and the answer streams in as the model writes it.
-**Stop**, in the panel's header, ends an answer under way; what it said stays as it is. Dragging the panel's inner edge
-sizes it, and both whether it is open and its width are kept with the window, as the sidebar's are.
+**Stop**, in the panel's header, or `Esc` while the field has the keyboard ends an answer under way; what it said stays
+as it is, and an answer stopped before it said anything is marked as stopped. Dragging the panel's inner edge sizes it,
+and both whether it is open and its width are kept with the window, as the sidebar's are.
 
 The model comes from pi-ai-go's catalog. `ai.provider` and `ai.model` in `settings.json` choose it; left out, the first
-provider with a key answers, with its first model. API keys are not in `settings.json`, which the account syncs: they
-live in `ai-keys.json` beside it, one key per provider, and a send with no key for any provider says so instead of
-asking the model. The file is written as `{"anthropic": "sk-..."}`.
+provider with a key answers, with its first model. A send that cannot go through says why: no key for the provider the
+settings name, no key at all, or a model the provider does not offer. API keys are not in `settings.json`, which the
+account syncs: they live in `ai-keys.json` beside it, one key per provider. The file is written as
+`{"anthropic": "sk-..."}`.
 
 ## Quick open
 

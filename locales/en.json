@@ -258,10 +258,23 @@
   "aiLimitReached": "The AI limit is reached: {reason}",
   "aiLimitSoon": "{count, plural, one {Too many AI requests: try again in # second.} other {Too many AI requests: try again in # seconds.}}",
   "aiNoKey": "Add an API key to ai-keys.json to chat with the assistant.",
+  "@aiNoKeyFor": {
+    "placeholders": {
+      "provider": {}
+    }
+  },
+  "aiNoKeyFor": "Add an API key for {provider} to ai-keys.json: the settings name it.",
   "aiPlaceholder": "Ask the assistant",
   "aiStop": "Stop",
+  "aiStopped": "Stopped.",
   "aiTimedOut": "The AI took too long to answer. Try again.",
   "aiTitle": "AI",
+  "@aiUnknownModel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "aiUnknownModel": "{model} is not a model the assistant knows.",
   "aiYou": "You",
   "alertCaution": "Caution",
   "alertImportant": "Important",

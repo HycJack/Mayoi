@@ -114,7 +114,7 @@ func (a *app) commandsIn(t locales.Messages) []command {
 		{"view.search", t.CmdViewSearch(), "", func() { a.showSearch(false) }},
 		{"view.scm", t.CmdViewScm(), "Ctrl+Shift+G", a.showSourceControl},
 		{"view.ai", t.CmdViewAI(), "Alt+CmdOrCtrl+A", a.toggleAI},
-		{"ai.stop", t.AiStop(), "", a.stopAI},
+		{"view.ai.stop", t.AiStop(), "", a.stopAI},
 		{"git.commit", t.CmdGitCommit(), "", func() { a.commit(false) }},
 		{"git.commitPush", t.CmdGitCommitPush(), "", func() { a.commit(true) }},
 		{"git.amend", t.CmdGitAmend(), "", func() { a.showSourceControl(); a.startAmend() }},
@@ -522,7 +522,7 @@ func (a *app) menu(cli bool, run func(id string, win *mygo.Window)) *mygo.Menu {
 			item("sel.sortAsc"), item("sel.sortDesc"), item("sel.camelCase"),
 		}},
 		{Label: locales.MenuView(), Submenu: []*mygo.MenuItem{
-			item("view.sidebar"), checkbox("view.sidebarRight", a.settings.SidebarRight), item("view.explorer"), item("view.search"), item("view.scm"), mygo.Separator(),
+			item("view.sidebar"), checkbox("view.sidebarRight", a.settings.SidebarRight), item("view.explorer"), item("view.search"), item("view.scm"), item("view.ai"), mygo.Separator(),
 			checkbox("view.wordWrap", a.settings.WordWrap), item("view.wordWrapTab"), item("view.togglePreview"), item("view.previewToSide"),
 			checkbox("view.vim", a.settings.Vim), checkbox("view.projectTabs", a.settings.ProjectTabs), mygo.Separator(),
 			item("view.splitRight"), item("view.nextColumn"), item("view.prevColumn"),
