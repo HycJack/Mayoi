@@ -107,3 +107,78 @@ func TestGrepFindsTheLines(t *testing.T) {
 		t.Errorf("grep said %q", text)
 	}
 }
+
+func TestWriteAsksBeforeItWrites(t *testing.T) {
+	root := aFolder(t)
+	var asked []Change
+	tools := &Tools{Root: root, Approve: func(c Change) bool {
+		asked = append(asked, c)
+		return true
+	}}
+	body, _ := json.Marshal(map[string]string{"path": "new.txt", "content": "hi\n"})
+	if got, err := tools.Write(context.Background(), "call-1", body, nil); err != nil || got.IsError {
+		t.Fatalf("write: %v %+v", err, got)
+	}
+	if len(asked) != 1 || asked[0].Path != filepath.Join(root, "new.txt") || string(asked[0].After) != "hi\n" {
+		t.Errorf("asked %+v", asked)
+	}
+	if data, err := os.ReadFile(filepath.Join(root, "new.txt")); err != nil || string(data) != "hi\n" {
+		t.Errorf("the file is %q, %v", data, err)
+	}
+}
+
+func TestARejectedWriteSaysSo(t *testing.T) {
+	root := aFolder(t)
+	tools := &Tools{Root: root, Approve: func(Change) bool { return false }}
+	body, _ := json.Marshal(map[string]string{"path": "new.txt", "content": "hi\n"})
+	got, err := tools.Write(context.Background(), "call-1", body, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.IsError || !strings.Contains(said(t, got), "rejected") {
+		t.Errorf("write said %+v", got)
+	}
+	if _, err := os.Stat(filepath.Join(root, "new.txt")); !os.IsNotExist(err) {
+		t.Error("a rejected write wrote the file")
+	}
+}
+
+func TestEditReplacesOneOccurrence(t *testing.T) {
+	root := aFolder(t)
+	tools := &Tools{Root: root}
+	body, _ := json.Marshal(map[string]string{"path": "main.go", "old": "println(\"hi\")", "new": "println(\"bye\")"})
+	got, err := tools.Edit(context.Background(), "call-1", body, nil)
+	if err != nil || got.IsError {
+		t.Fatalf("edit: %v %+v", err, got)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, "main.go"))
+	if !strings.Contains(string(data), "println(\"bye\")") {
+		t.Errorf("the file is %q", data)
+	}
+}
+
+func TestEditRefusesTextItCannotFind(t *testing.T) {
+	tools := &Tools{Root: aFolder(t)}
+	body, _ := json.Marshal(map[string]string{"path": "main.go", "old": "nothing like this", "new": "x"})
+	got, err := tools.Edit(context.Background(), "call-1", body, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.IsError || !strings.Contains(said(t, got), "not found") {
+		t.Errorf("edit said %+v", got)
+	}
+}
+
+func TestAWriteOutsideTheFolderIsRefused(t *testing.T) {
+	root := aFolder(t)
+	var asked bool
+	tools := &Tools{Root: root, Approve: func(Change) bool { asked = true; return true }}
+	body, _ := json.Marshal(map[string]string{"path": "../escape.txt", "content": "hi\n"})
+	got, _ := tools.Write(context.Background(), "call-1", body, nil)
+	if !got.IsError || asked {
+		t.Errorf("write: %+v, asked=%v", got, asked)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(root), "escape.txt")); !os.IsNotExist(err) {
+		t.Error("a write escaped the folder")
+	}
+}

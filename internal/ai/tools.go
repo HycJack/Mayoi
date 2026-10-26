@@ -21,6 +21,32 @@ import (
 // is refused, as are the absolute ones.
 type Tools struct {
 	Root string
+	// Approve is asked before a write, nil to allow every one.
+	Approve func(Change) bool
+}
+
+// Change is what the assistant wants to do that the user must allow: a
+// write, with the text before and after, or a command.
+type Change struct {
+	Path   string
+	Before []byte
+	After  []byte
+	// Command is the command line a change runs, empty for a write.
+	Command string
+}
+
+// WriteParams is what write is asked: the file and the text it takes.
+type WriteParams struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
+// EditParams is what edit is asked: the file, the text to find in it
+// and the text that takes its place.
+type EditParams struct {
+	Path string `json:"path"`
+	Old  string `json:"old"`
+	New  string `json:"new"`
 }
 
 // ReadParams is what read is asked: the file, and the lines of it.
@@ -256,6 +282,85 @@ func globRegexp(pattern string) string {
 	}
 	sb.WriteString("$")
 	return sb.String()
+}
+
+// approved asks the approver, if there is one, and reads a refusal as
+// what the model is told.
+func (t *Tools) approved(c Change) (agent.AgentToolResult, bool) {
+	if t.Approve == nil || t.Approve(c) {
+		return agent.AgentToolResult{}, true
+	}
+	return text("the user rejected this change"), false
+}
+
+// Write is a file of the folder, with the text it takes.
+func (t *Tools) Write(ctx context.Context, id string, params json.RawMessage, onUpdate func(json.RawMessage)) (agent.AgentToolResult, error) {
+	var p WriteParams
+	if err := json.Unmarshal(params, &p); err != nil {
+		return failure(err), nil
+	}
+	full, err := Under(t.Root, p.Path)
+	if err != nil {
+		return failure(err), nil
+	}
+	before, _ := vfs.ReadFile(full)
+	c := Change{Path: full, Before: before, After: []byte(p.Content)}
+	if told, ok := t.approved(c); !ok {
+		return told, nil
+	}
+	if _, err := vfs.WriteFile(full, c.After, 0o644); err != nil {
+		return failure(err), nil
+	}
+	return text("wrote " + p.Path), nil
+}
+
+// Edit is a file of the folder, with the one piece of text it has
+// replaced.
+func (t *Tools) Edit(ctx context.Context, id string, params json.RawMessage, onUpdate func(json.RawMessage)) (agent.AgentToolResult, error) {
+	var p EditParams
+	if err := json.Unmarshal(params, &p); err != nil {
+		return failure(err), nil
+	}
+	full, err := Under(t.Root, p.Path)
+	if err != nil {
+		return failure(err), nil
+	}
+	before, err := vfs.ReadFile(full)
+	if err != nil {
+		return failure(err), nil
+	}
+	if !strings.Contains(string(before), p.Old) {
+		return failure(fmt.Errorf("%q is not found in %s", p.Old, p.Path)), nil
+	}
+	after := strings.Replace(string(before), p.Old, p.New, 1)
+	c := Change{Path: full, Before: before, After: []byte(after)}
+	if told, ok := t.approved(c); !ok {
+		return told, nil
+	}
+	if _, err := vfs.WriteFile(full, c.After, 0o644); err != nil {
+		return failure(err), nil
+	}
+	return text("edited " + p.Path), nil
+}
+
+// WriteSet is the tools that change the folder.
+func (t *Tools) WriteSet() []agent.AgentTool {
+	return []agent.AgentTool{
+		{
+			Name:        "write",
+			Description: "Write a file of the folder, making it if it is new.",
+			Label:       "Write",
+			Parameters:  json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}`),
+			Execute:     t.Write,
+		},
+		{
+			Name:        "edit",
+			Description: "Replace one piece of text in a file of the folder with another.",
+			Label:       "Edit",
+			Parameters:  json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"}},"required":["path","old","new"]}`),
+			Execute:     t.Edit,
+		},
+	}
 }
 
 // ReadSet is the tools that only look at the folder.
