@@ -136,6 +136,9 @@ differ in width lines them up only roughly.
 - **`scmAllBranches`** shows the commits of every branch and tag, not only those of the branch checked out.
 - **`aiModel`** is the model of Mon's AI gateway that writes commit messages, `deepseek-flash` when empty. The models
   your account can use are listed at `https://mon.sorrycc.dev/api/v1/ai/v1/models`.
+- **`ai`** is the AI Assistant panel's model: `{"provider": "anthropic", "model": "claude-sonnet-4-5"}`. Left out, the
+  first provider with a key in `ai-keys.json` answers, with its first model. Its API keys are not here, which the account
+  syncs: see [AI Assistant](FEATURES.md#ai-assistant).
 - **`crashReports`** is what Mayoi does at launch with the crash logs of the last runs: `""` asks whether to send them
   to Mon, `"always"` sends them and `"never"` doesn't. A report is anonymous, never sent with your account's token,
   and has your home folder taken out. **Show Report** in the question opens the logs as they would be sent. Only
@@ -179,6 +182,8 @@ so it overwrites any change you make to one while it's open. To start fresh, qui
   and its panel's height and, at a side, its width. Deleting it forgets all of that.
 - **`window-state.json`** holds each window's position and size.
 - **`updater.json`** holds your choices in the update window. See [Updates](FEATURES.md#updates).
+- **`ai-keys.json`** holds the AI Assistant's API keys, one per provider, as `{"anthropic": "sk-..."}`. It is kept apart
+  from `settings.json` because the account syncs that one, and read only when the assistant sends a message.
 
 Versions before 0.5.1 kept the windows and layout in `settings.json`. Mayoi moves them to `state.json` the first time
 it starts.

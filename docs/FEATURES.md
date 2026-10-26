@@ -392,6 +392,18 @@ On Windows and Linux the shell has the keys with Ctrl, which edit its line, exce
 Command Palette, the terminal and the sidebar toggles, Next and Previous Tab, Alt+1 to Alt+9 and zoom, and every
 Ctrl+Shift shortcut but Ctrl+Shift+C and Ctrl+Shift+V, the terminal's copy and paste, and those of the function keys.
 
+## AI Assistant
+
+**View → AI Assistant**, the command palette's **AI Assistant** or ⌥⌘A shows a panel at the right of the window: type
+what you want to know about the code of the folder, press Enter, and the answer streams in as the model writes it.
+**Stop**, in the panel's header, ends an answer under way; what it said stays as it is. Dragging the panel's inner edge
+sizes it, and both whether it is open and its width are kept with the window, as the sidebar's are.
+
+The model comes from pi-ai-go's catalog. `ai.provider` and `ai.model` in `settings.json` choose it; left out, the first
+provider with a key answers, with its first model. API keys are not in `settings.json`, which the account syncs: they
+live in `ai-keys.json` beside it, one key per provider, and a send with no key for any provider says so instead of
+asking the model. The file is written as `{"anthropic": "sk-..."}`.
+
 ## Quick open
 
 ⌘P, or the search box in the title bar, opens a fuzzy file search with recent files first. In a Git work tree it lists

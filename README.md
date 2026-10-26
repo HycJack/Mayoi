@@ -37,6 +37,8 @@ https://github.com/user-attachments/assets/673e7907-2b2c-4ed6-9093-1ba9633cd61c
 - **Auto save,** and every window reopened as you left it, with its columns, tabs and carets
 - **Settings:** JSON files applied as you save them, with the code's and the terminal's fonts, weight, ligatures and
   line height, and keyboard shortcuts in VS Code's format (see [docs/SETTINGS.md](docs/SETTINGS.md))
+- **AI Assistant:** a panel at the right of the window (⌥⌘A) to ask about the code of the folder, the answer
+  streamed as it is written, with keys of its own in `ai-keys.json`
 - **AI commit messages:** signed in, write the commit message from the changes with Mon's AI gateway
 - **Settings sync:** sign in with GitHub or Google, and your settings and keyboard shortcuts follow you between machines
 
@@ -117,6 +119,7 @@ To open folders from a shell, choose **File → Install 'mayoi' Command** (on Li
 | ⇧⌘] / ⇧⌘[ / ⌃⌘1…9 | Next / previous / go to project, with project tabs |
 | ⌘\\ / ⌥⌘→ / ⌥⌘← | Split right / next column / previous column |
 | ⌘B / ⌃\` / ⌃⇧\` | Toggle sidebar / toggle terminal panel / new terminal |
+| ⌥⌘A | Toggle the AI Assistant panel |
 | ⌘Z / ⇧⌘Z | Undo / redo |
 | Tab / ⇧Tab, ⌘] / ⌘[ | Indent / outdent |
 | ⌘/ | Toggle line comment |

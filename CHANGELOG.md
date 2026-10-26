@@ -3,6 +3,13 @@
 The update window shows the section of the version it offers. Every release
 needs a `## <version>` section here, or its build fails.
 
+## Unreleased
+
+- The **AI Assistant** panel sits at the right of the window: **View → AI Assistant**, or `Alt+CmdOrCtrl+A`.
+- Ask about the code of the folder; the answer streams in as it is written, and **Stop** ends it.
+- API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
+- `ai.provider` and `ai.model` in `settings.json` choose the model; without them the first provider with a key answers.
+
 ## 0.12.0
 
 - The Markdown preview draws `mermaid` code blocks as diagrams, in the colors of the theme.
