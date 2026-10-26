@@ -265,6 +265,26 @@ func (msgs Messages) AgoYears(count int) string {
 	return Catalog.Format(msgs.locale, "agoYears", map[string]any{"count": count})
 }
 
+// AiChatFailed says "The assistant failed: {error}"
+// in the language the app shows.
+func AiChatFailed(error string) string { return In(i18n.Locale()).AiChatFailed(error) }
+
+// AiChatFailed says "The assistant failed: {error}"
+// in the language of msgs.
+func (msgs Messages) AiChatFailed(error string) string {
+	return Catalog.Format(msgs.locale, "aiChatFailed", map[string]any{"error": error})
+}
+
+// AiEmpty says "Ask about the code in this folder."
+// in the language the app shows.
+func AiEmpty() string { return In(i18n.Locale()).AiEmpty() }
+
+// AiEmpty says "Ask about the code in this folder."
+// in the language of msgs.
+func (msgs Messages) AiEmpty() string {
+	return Catalog.Format(msgs.locale, "aiEmpty", nil)
+}
+
 // AiFailed says "Couldn't write the message: {error}"
 // in the language the app shows.
 func AiFailed(error string) string { return In(i18n.Locale()).AiFailed(error) }
@@ -305,6 +325,36 @@ func (msgs Messages) AiLimitSoon(count int) string {
 	return Catalog.Format(msgs.locale, "aiLimitSoon", map[string]any{"count": count})
 }
 
+// AiNoKey says "Add an API key to ai-keys.json to chat with the assistant."
+// in the language the app shows.
+func AiNoKey() string { return In(i18n.Locale()).AiNoKey() }
+
+// AiNoKey says "Add an API key to ai-keys.json to chat with the assistant."
+// in the language of msgs.
+func (msgs Messages) AiNoKey() string {
+	return Catalog.Format(msgs.locale, "aiNoKey", nil)
+}
+
+// AiPlaceholder says "Ask the assistant"
+// in the language the app shows.
+func AiPlaceholder() string { return In(i18n.Locale()).AiPlaceholder() }
+
+// AiPlaceholder says "Ask the assistant"
+// in the language of msgs.
+func (msgs Messages) AiPlaceholder() string {
+	return Catalog.Format(msgs.locale, "aiPlaceholder", nil)
+}
+
+// AiStop says "Stop"
+// in the language the app shows.
+func AiStop() string { return In(i18n.Locale()).AiStop() }
+
+// AiStop says "Stop"
+// in the language of msgs.
+func (msgs Messages) AiStop() string {
+	return Catalog.Format(msgs.locale, "aiStop", nil)
+}
+
 // AiTimedOut says "The AI took too long to answer. Try again."
 // in the language the app shows.
 func AiTimedOut() string { return In(i18n.Locale()).AiTimedOut() }
@@ -313,6 +363,16 @@ func AiTimedOut() string { return In(i18n.Locale()).AiTimedOut() }
 // in the language of msgs.
 func (msgs Messages) AiTimedOut() string {
 	return Catalog.Format(msgs.locale, "aiTimedOut", nil)
+}
+
+// AiTitle says "AI"
+// in the language the app shows.
+func AiTitle() string { return In(i18n.Locale()).AiTitle() }
+
+// AiTitle says "AI"
+// in the language of msgs.
+func (msgs Messages) AiTitle() string {
+	return Catalog.Format(msgs.locale, "aiTitle", nil)
 }
 
 // AlertCaution says "Caution"
@@ -2245,6 +2305,16 @@ func CmdViewAppearanceSystem() string { return In(i18n.Locale()).CmdViewAppearan
 // in the language of msgs.
 func (msgs Messages) CmdViewAppearanceSystem() string {
 	return Catalog.Format(msgs.locale, "cmdViewAppearanceSystem", nil)
+}
+
+// CmdViewAI says "AI Assistant"
+// in the language the app shows.
+func CmdViewAI() string { return In(i18n.Locale()).CmdViewAI() }
+
+// CmdViewAI says "AI Assistant"
+// in the language of msgs.
+func (msgs Messages) CmdViewAI() string {
+	return Catalog.Format(msgs.locale, "cmdViewAI", nil)
 }
 
 // CmdViewExplorer says "Explorer"
