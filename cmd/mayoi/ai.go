@@ -119,7 +119,10 @@ func (a *app) send() {
 				if p.writing != w {
 					return
 				}
-				p.msgs[last].text += s
+				// The answer may have been dropped as empty already.
+				if last < len(p.msgs) {
+					p.msgs[last].text += s
+				}
 			})
 		})
 		stopped := ctx.Err() != nil
@@ -132,7 +135,7 @@ func (a *app) send() {
 			if err != nil && !stopped {
 				p.err = err.Error()
 			}
-			if p.msgs[last].text == "" {
+			if last < len(p.msgs) && p.msgs[last].text == "" {
 				p.msgs = p.msgs[:last]
 			}
 		})
