@@ -1,0 +1,12 @@
+./bufferpool.go
+./decode.go
+./fastclock.go
+./match.go
+./options.go
+./prefixsearch.go
+./regexp.go
+./regexp_codegen.go
+./replace.go
+./runner.go
+./split.go
+./stringprefixfilter.go

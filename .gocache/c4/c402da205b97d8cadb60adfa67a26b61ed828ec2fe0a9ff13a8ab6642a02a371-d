@@ -1,0 +1,3 @@
+./hidewindow_windows.go
+./vfs.go
+./hidewindow_windows_test.go

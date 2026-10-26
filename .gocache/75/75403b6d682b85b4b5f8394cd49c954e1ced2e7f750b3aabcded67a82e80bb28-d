@@ -1,0 +1,6 @@
+./d3d11.go
+./effectcache.go
+./latency.go
+./offscreen.go
+./shader.go
+./shaders.go

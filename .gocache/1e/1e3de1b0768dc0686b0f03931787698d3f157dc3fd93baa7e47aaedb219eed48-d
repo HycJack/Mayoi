@@ -1,0 +1,8 @@
+./config.go
+./conn.go
+./forward.go
+./fs.go
+./path.go
+./transfer.go
+./remote_test.go
+./transfer_test.go

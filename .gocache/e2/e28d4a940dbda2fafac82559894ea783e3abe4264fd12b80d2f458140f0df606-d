@@ -1,0 +1,14 @@
+./charclass.go
+./code.go
+./ecma_unicode.go
+./ecma_unicode_tables.go
+./escape.go
+./grapheme.go
+./optimizations.go
+./parser.go
+./prefix.go
+./prefixanalyzer.go
+./replacerdata.go
+./tree.go
+./unicode_alias_tables.go
+./writer.go

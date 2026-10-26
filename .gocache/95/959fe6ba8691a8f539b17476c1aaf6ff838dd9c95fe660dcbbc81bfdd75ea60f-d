@@ -1,0 +1,11 @@
+./caret.go
+./decoration.go
+./dwrite_objects_windows.go
+./dwrite_windows.go
+./edit.go
+./engine.go
+./join.go
+./lang.go
+./layout.go
+./raster.go
+./stub.go

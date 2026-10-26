@@ -1,0 +1,12 @@
+./clipboard.go
+./encode.go
+./ffi.go
+./images.go
+./lib.go
+./open_windows.go
+./render.go
+./rows.go
+./search.go
+./selection.go
+./terminal.go
+./types.go

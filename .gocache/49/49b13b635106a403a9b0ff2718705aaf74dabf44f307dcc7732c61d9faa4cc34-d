@@ -1,0 +1,6 @@
+./glob.go
+./index.go
+./tree.go
+./fuzzy_bench_test.go
+./glob_test.go
+./workspace_test.go

@@ -103,7 +103,26 @@ replace github.com/HycJack/pi-ai-go => ../../pi-ai-go
 - `cmd/mayoi`：沿用现有 mygo 假 app 模式，测面板开合、审批卡片进出、
   会话切换的状态流转；审批 → vfs 写入 → 标签页刷新链路用临时目录测。
 
-## 9. 里程碑
+## 9. terax-clone 来源映射
+
+实施时从 `C:\Users\huangyicao\Downloads\terax-clone` 搬运的对照表（其前端 TypeScript
+编排已被 pi-ai-go 取代，只搬数据资产与机制设计）：
+
+| Mayoi 位置 | 搬什么 | terax-clone 来源 |
+|---|---|---|
+| `internal/ai/personas.go` | 五个人格的 `instructions` 原文 | `frontend/src/modules/ai/lib/agents.ts` 的 `BUILTIN_AGENTS` |
+| `internal/ai`（自定义人格） | 人格增删/合并机制设计 | `agentsStore.ts` 与设置界面逻辑，数据结构改存 Mayoi 设置 JSON |
+| `internal/ai`（MAYOI.md 注入） | 项目记忆机制：30s 缓存、32KB 截断 | `lib/transport.ts` 的 `ContextAwareTransport`（Go 重写） |
+| `internal/ai`（env 注入） | `<env>` 块内容清单：终端 cwd、workspace 根、活动文件 | 同上 `transport.ts` |
+| `internal/ai`（审批机制） | 写操作 approve/reject、拒绝结果回给模型、审批后开 AI diff 标签页 | `tools/*` 的 read-before-edit 与审批策略、`docs/agent-and-conversation-design.md` §2.2 |
+| `internal/ai`（自动标题） | 首轮后小模型生成标题、失败取首句前 40 字 | `chatStore.ts` 的会话标题逻辑 |
+| 会话历史 | 多会话列表 + 持久化（实现改用 pi-ai-go 的 session JSONL） | `chatStore.ts` + `internal/store` |
+| 不搬 | PTY 终端、CodeMirror、LSP、文件树/grep/Git、React 组件库 | Mayoi 已有或更强，见对比结论 |
+
+运行链路参考：terax-clone `docs/agent-and-conversation-design.md`（24 步上限、
+工具系统分组、上下文压缩均出自该文档，与 pi-ai-go 能力一一对应）。
+
+## 10. 里程碑
 
 1. **M1 基础聊天**：依赖接入 + `internal/ai` 骨架 + 右侧面板 + 流式对话（无工具）
 2. **M2 Agent 工具**：三档工具 + 写审批 diff 卡片 + vfs 联动 + open_file

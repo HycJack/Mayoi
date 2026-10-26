@@ -1,0 +1,6 @@
+./bsdiff.go
+./delta.go
+./desktop.go
+./github.go
+./suffix.go
+./update.go

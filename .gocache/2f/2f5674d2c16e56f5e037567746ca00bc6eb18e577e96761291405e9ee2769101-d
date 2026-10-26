@@ -1,0 +1,15 @@
+./commitactions.go
+./git.go
+./messagediff.go
+./nested.go
+./panels.go
+./submodules.go
+./worktree.go
+./commitactions_test.go
+./git_test.go
+./messagediff_test.go
+./nested_test.go
+./panels_test.go
+./switch_test.go
+./sync_test.go
+./worktree_test.go

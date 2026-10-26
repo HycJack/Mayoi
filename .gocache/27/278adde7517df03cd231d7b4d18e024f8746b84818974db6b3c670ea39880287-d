@@ -1,0 +1,5 @@
+./session.go
+./strings.go
+./translations.go
+./updater.go
+./window.go

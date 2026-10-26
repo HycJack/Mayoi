@@ -1,0 +1,10 @@
+./blur.go
+./canvas.go
+./clipmask.go
+./corner.go
+./damage.go
+./effect.go
+./pixels_other.go
+./raster.go
+./team.go
+./transform.go

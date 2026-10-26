@@ -1,0 +1,7 @@
+./atlas.go
+./damage.go
+./effect.go
+./fold.go
+./oklab.go
+./scene.go
+./transform.go

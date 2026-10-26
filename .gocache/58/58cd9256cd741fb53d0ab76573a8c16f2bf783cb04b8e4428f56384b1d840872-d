@@ -1,0 +1,17 @@
+./box.go
+./font.go
+./ghostty.go
+./ghostty_themes.go
+./images.go
+./keybind.go
+./keys.go
+./library.go
+./links.go
+./mirror.go
+./mirror_images.go
+./paint.go
+./paste.go
+./search.go
+./terminal.go
+./theme.go
+./view.go

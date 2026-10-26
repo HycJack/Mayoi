@@ -1,0 +1,13 @@
+./bidi_class.go
+./combining_classes.go
+./decomposition.go
+./east_asian_width.go
+./emojis.go
+./general_category.go
+./grapheme_break.go
+./indic_conjunct_break.go
+./line_break.go
+./mirroring.go
+./unicode.go
+./vertical_orientation.go
+./word_break.go

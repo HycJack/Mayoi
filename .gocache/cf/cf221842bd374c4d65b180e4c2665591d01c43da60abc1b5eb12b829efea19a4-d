@@ -1,0 +1,7 @@
+./commitactions.go
+./git.go
+./messagediff.go
+./nested.go
+./panels.go
+./submodules.go
+./worktree.go

@@ -1,0 +1,213 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Ebitengine Authors
+
+#include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+uint32_t stack_uint8_t(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e, uint32_t f, uint32_t g, uint32_t h, uint8_t i, uint8_t j, uint32_t k ) {
+    assert(i == 1);
+    assert(j == 2);
+    assert(k == 1024);
+    return a | b | c | d | e | f | g | h | (uint32_t)i | (uint32_t)j | k;
+}
+
+uint32_t reg_uint8_t(uint8_t a, uint8_t b, uint32_t c) {
+    assert(a == 1);
+    assert(b == 2);
+    assert(c == 1024);
+    return a | b | c;
+}
+
+uint32_t stack_string(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e, uint32_t f, uint32_t g, uint32_t h, const char * i) {
+    assert(i != 0);
+    assert(strcmp(i, "test") == 0);
+    return a | b | c | d | e | f | g | h;
+}
+
+void stack_8i32_3strings(char* result, size_t size, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, const char* s1, const char* s2, const char* s3) {
+    snprintf(result, size, "%d:%d:%d:%d:%d:%d:%d:%d:%s:%s:%s", a1, a2, a3, a4, a5, a6, a7, a8, s1, s2, s3);
+}
+
+// HFA (Homogeneous Float Aggregate) struct with 2 floats
+typedef struct {
+    float x;
+    float y;
+} Float2;
+
+// HFA struct with 4 floats
+typedef struct {
+    float x;
+    float y;
+    float z;
+    float w;
+} Float4;
+
+// Non-HFA struct (mixed types)
+typedef struct {
+    int32_t a;
+    float b;
+} MixedStruct;
+
+// Small struct that fits in one register
+typedef struct {
+    int32_t x;
+    int32_t y;
+} IntPair;
+
+// Test: 8 int registers exhausted, then HFA struct on stack
+void stack_8int_hfa2_stack(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, Float2 f) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%.1f:%.1f",
+             a1, a2, a3, a4, a5, a6, a7, a8, f.x, f.y);
+}
+
+// Test: 8 int registers exhausted, then multiple structs on stack
+void stack_8int_2structs_stack(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, IntPair p1, IntPair p2) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
+             a1, a2, a3, a4, a5, a6, a7, a8, p1.x, p1.y, p2.x, p2.y);
+}
+
+// Test: 8 float registers exhausted, then HFA on stack
+void stack_8float_hfa2_stack(char *buf, size_t bufsize, float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, Float2 f) {
+    snprintf(buf, bufsize, "%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f",
+             f1, f2, f3, f4, f5, f6, f7, f8, f.x, f.y);
+}
+
+// Test: mixed - int regs exhausted, float struct can still use float regs
+void stack_8int_hfa2_floatregs(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, Float2 f) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%.1f:%.1f",
+             a1, a2, a3, a4, a5, a6, a7, a8, f.x, f.y);
+}
+
+// Test: primitives and struct interleaved on stack
+void stack_8int_int_struct_int(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, int32_t a9, IntPair p, int32_t a10) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
+             a1, a2, a3, a4, a5, a6, a7, a8, a9, p.x, p.y, a10);
+}
+
+// Test: HFA4 struct on stack (4 floats)
+void stack_8int_hfa4_stack(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, Float4 f) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%.1f:%.1f:%.1f:%.1f",
+             a1, a2, a3, a4, a5, a6, a7, a8, f.x, f.y, f.z, f.w);
+}
+
+// Test: mixed type struct on stack
+void stack_8int_mixed_struct(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, MixedStruct m) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%.1f",
+             a1, a2, a3, a4, a5, a6, a7, a8, m.a, m.b);
+}
+
+void stack_10_int32(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, int32_t a9, int32_t a10) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
+             a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
+}
+
+void stack_11_int32(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, int32_t a9, int32_t a10, int32_t a11) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
+             a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
+}
+
+void stack_10_float32(char *buf, size_t bufsize, float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10) {
+    snprintf(buf, bufsize, "%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f:%.1f",
+             f1, f2, f3, f4, f5, f6, f7, f8, f9, f10);
+}
+
+void stack_mixed_stack_4args(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, const char *s1, bool b1, int32_t a9, const char *s2) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%s:%d:%d:%s",
+             a1, a2, a3, a4, a5, a6, a7, a8, s1, b1, a9, s2);
+}
+
+void stack_20_int32(char *buf, size_t bufsize, int32_t a1, int32_t a2, int32_t a3, int32_t a4, int32_t a5, int32_t a6, int32_t a7, int32_t a8, int32_t a9, int32_t a10, int32_t a11, int32_t a12, int32_t a13, int32_t a14, int32_t a15, int32_t a16, int32_t a17, int32_t a18, int32_t a19, int32_t a20) {
+    snprintf(buf, bufsize, "%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
+             a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20);
+}
+
+void stack_25_int64_exceeds(char *buf, size_t bufsize, int64_t a1, int64_t a2, int64_t a3, int64_t a4, int64_t a5, int64_t a6, int64_t a7, int64_t a8, int64_t a9, int64_t a10, int64_t a11, int64_t a12, int64_t a13, int64_t a14, int64_t a15, int64_t a16, int64_t a17, int64_t a18, int64_t a19, int64_t a20, int64_t a21, int64_t a22, int64_t a23, int64_t a24, int64_t a25) {
+    snprintf(buf, bufsize, "%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64 ":%" PRId64,
+             a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25);
+}
+
+uintptr_t stack_20_uintptr(
+    uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5,
+    uintptr_t a6, uintptr_t a7, uintptr_t a8, uintptr_t a9, uintptr_t a10,
+    uintptr_t a11, uintptr_t a12, uintptr_t a13, uintptr_t a14, uintptr_t a15,
+    uintptr_t a16, uintptr_t a17, uintptr_t a18, uintptr_t a19, uintptr_t a20
+) {
+    return a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 +
+           a11 + a12 + a13 + a14 + a15 + a16 + a17 + a18 + a19 + a20;
+}
+
+uintptr_t stack_32_uintptr(
+    uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5, uintptr_t a6, uintptr_t a7, uintptr_t a8,
+    uintptr_t a9, uintptr_t a10, uintptr_t a11, uintptr_t a12, uintptr_t a13, uintptr_t a14, uintptr_t a15, uintptr_t a16,
+    uintptr_t a17, uintptr_t a18, uintptr_t a19, uintptr_t a20, uintptr_t a21, uintptr_t a22, uintptr_t a23, uintptr_t a24,
+    uintptr_t a25, uintptr_t a26, uintptr_t a27, uintptr_t a28, uintptr_t a29, uintptr_t a30, uintptr_t a31, uintptr_t a32
+) {
+    return a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 +
+           a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16 +
+           a17 + a18 + a19 + a20 + a21 + a22 + a23 + a24 +
+           a25 + a26 + a27 + a28 + a29 + a30 + a31 + a32;
+}
+
+double stack_32_mixed_int_float(
+    uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5, uintptr_t a6, uintptr_t a7, uintptr_t a8,
+    uintptr_t a9, uintptr_t a10, uintptr_t a11, uintptr_t a12, uintptr_t a13, uintptr_t a14, uintptr_t a15, uintptr_t a16,
+    double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8,
+    double f9, double f10, double f11, double f12, double f13, double f14, double f15, double f16
+) {
+    return (double)a1 * 1 + (double)a2 * 2 + (double)a3 * 3 + (double)a4 * 4 +
+           (double)a5 * 5 + (double)a6 * 6 + (double)a7 * 7 + (double)a8 * 8 +
+           (double)a9 * 9 + (double)a10 * 10 + (double)a11 * 11 + (double)a12 * 12 +
+           (double)a13 * 13 + (double)a14 * 14 + (double)a15 * 15 + (double)a16 * 16 +
+           f1 * 17 + f2 * 18 + f3 * 19 + f4 * 20 +
+           f5 * 21 + f6 * 22 + f7 * 23 + f8 * 24 +
+           f9 * 25 + f10 * 26 + f11 * 27 + f12 * 28 +
+           f13 * 29 + f14 * 30 + f15 * 31 + f16 * 32;
+}
+
+int64_t arm_int64_unaligned_in_registers(uintptr_t a1, int64_t a2) {
+    return (int64_t)a1 * 123 + a2;
+}
+
+int64_t arm_int64_unaligned_on_stack(uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5, int64_t a6) {
+    return (int64_t)a1 * 1 + (int64_t)a2 * 2 + (int64_t)a3 * 3 + (int64_t)a4 * 4 +
+           (int64_t)a5 * 5 + a6;
+}
+
+int64_t arm_int64_unaligned_on_stack_after_floats(
+    uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, /* these args are going to integer registers */
+    float f1, float f2, float f3, float f4, /* these args are going to float registers */
+    float f5, float f6, float f7, float f8,
+    float f9, float f10, float f11, float f12,
+    float f13, float f14, float f15, float f16,
+    float f17, /* this is a first arg on stack */
+    int64_t a5 /* this arg must be padded */
+) {
+    return (int64_t)a1 * 1 + (int64_t)a2 * 2 + (int64_t)a3 * 3 + (int64_t)a4 * 4 + a5;
+}
+
+double arm_float64_unaligned_in_registers(uintptr_t a1, double a2) {
+    return (double)a1 * 123.5 + a2;
+}
+
+double arm_float64_unaligned_on_stack(uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5, double a6) {
+    return (double)a1 * 1 + (double)a2 * 2 + (double)a3 * 3 + (double)a4 * 4 +
+           (double)a5 * 5 + a6;
+}
+
+typedef int32_t (*AddFunc)(int32_t, int32_t);
+
+int32_t returned_add(int32_t a, int32_t b) {
+    return a + b;
+}
+
+AddFunc return_func_ptr(void) {
+    return returned_add;
+}
+
+AddFunc return_null_func_ptr(void) {
+    return NULL;
+}

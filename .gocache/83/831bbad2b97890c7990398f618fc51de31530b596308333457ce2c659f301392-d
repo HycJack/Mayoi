@@ -1,0 +1,8 @@
+./colors.go
+./compile.go
+./dom.go
+./geom.go
+./render.go
+./stroke.go
+./style.go
+./svg.go

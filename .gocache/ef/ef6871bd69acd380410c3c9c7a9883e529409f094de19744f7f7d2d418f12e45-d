@@ -1,0 +1,7 @@
+./cli.go
+./client.go
+./ipc.go
+./request.go
+./cli_test.go
+./ipc_test.go
+./request_test.go
