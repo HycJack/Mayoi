@@ -175,10 +175,14 @@ func (a *app) send() {
 	a.invalidate()
 }
 
-// spoken is the messages of the conversation as the models take them.
+// spoken is the messages of the conversation as the models take them: an
+// answer that was stopped before it said anything is left out.
 func spoken(msgs []aiMessage) []ai.Message {
 	out := make([]ai.Message, 0, len(msgs))
 	for _, m := range msgs {
+		if m.text == "" {
+			continue
+		}
 		out = append(out, ai.Message{Role: m.role, Text: m.text})
 	}
 	return out
