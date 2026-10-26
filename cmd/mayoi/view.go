@@ -156,6 +156,9 @@ func (a *app) view(c *ui.Context) {
 			if side == "right" {
 				a.sidePanel(c, true)
 			}
+			if w.AIOpen {
+				a.aiSidePanel(c)
+			}
 		})
 		a.statusBar(c)
 	})

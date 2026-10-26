@@ -113,6 +113,7 @@ func (a *app) commandsIn(t locales.Messages) []command {
 		{"view.explorer", t.CmdViewExplorer(), "Shift+CmdOrCtrl+E", a.showExplorer},
 		{"view.search", t.CmdViewSearch(), "", func() { a.showSearch(false) }},
 		{"view.scm", t.CmdViewScm(), "Ctrl+Shift+G", a.showSourceControl},
+		{"view.ai", t.CmdViewAI(), "Alt+CmdOrCtrl+A", a.toggleAI},
 		{"git.commit", t.CmdGitCommit(), "", func() { a.commit(false) }},
 		{"git.commitPush", t.CmdGitCommitPush(), "", func() { a.commit(true) }},
 		{"git.amend", t.CmdGitAmend(), "", func() { a.showSourceControl(); a.startAmend() }},

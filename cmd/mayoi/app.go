@@ -298,6 +298,8 @@ type app struct {
 	fails   int
 	notes   []note // what went well, to show as toasts
 	title   string
+	// ai is the assistant's panel, at the right of the window.
+	ai aiPanel
 	focus   pane
 	started bool
 	// keys are the shortcuts of keybindings.json, nil for none; chord the
