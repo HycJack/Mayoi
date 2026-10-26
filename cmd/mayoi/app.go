@@ -301,11 +301,11 @@ type app struct {
 	fails   int
 	notes   []note // what went well, to show as toasts
 	title   string
-	// ai is the assistant's panel, at the right of the window, and
-	// stream how it asks a model: ai.Live, unless a test has its own.
-	// target is the model it asks, and its key.
+	// ai is the assistant's panel, at the right of the window, and loop
+	// how it runs a message: ai.Loop, unless a test has its own. target
+	// is the model it asks, and its key.
 	ai     aiPanel
-	stream aiStream
+	loop   aiLoop
 	target func() (piai.Model, string, error)
 	focus   pane
 	started bool
@@ -346,7 +346,7 @@ const (
 )
 
 func newApp(h host, s *settings.Settings, w *settings.Window) *app {
-	a := &app{host: h, settings: s, window: w, fileRow: -1, stream: ai.Live}
+	a := &app{host: h, settings: s, window: w, fileRow: -1, loop: ai.Loop}
 	a.target = a.aiTarget
 	w.Normalize(settings.DefaultLayout)
 	a.scm.row, a.inFiles.row = -1, -1

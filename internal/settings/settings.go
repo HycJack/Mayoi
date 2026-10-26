@@ -206,6 +206,9 @@ type Prefs struct {
 type AISettings struct {
 	Provider string `json:"provider,omitempty"`
 	Model    string `json:"model,omitempty"`
+	// ApproveEdits writes what the assistant asks without a card, as the
+	// user asked once and for all.
+	ApproveEdits bool `json:"approveEdits,omitempty"`
 }
 
 // TabStyle is a project's own look on the rail: Label, up to two

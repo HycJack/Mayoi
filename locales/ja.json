@@ -8,6 +8,8 @@
   "agoMinutes": "{count} 分前",
   "agoMonths": "{count} か月前",
   "agoYears": "{count} 年前",
+  "aiApprove": "許可",
+  "aiApproveTitle": "アシスタントが変更を求めています",
   "aiChatFailed": "アシスタントが失敗しました：{error}",
   "aiEmpty": "このフォルダーのコードについて聞いてください。",
   "aiFailed": "メッセージを書けませんでした：{error}",
@@ -22,10 +24,18 @@
   },
   "aiNoKeyFor": "ai-keys.json に {provider} の API key を追加してください。設定が指定しています。",
   "aiPlaceholder": "アシスタントに聞く",
+  "aiReject": "断る",
   "aiStop": "停止",
   "aiStopped": "停止しました。",
+  "aiStepsOut": "24 ステップで打ち切りました。続けるにはもう一度聞いてください。",
   "aiTimedOut": "AI の応答に時間がかかりすぎました。もう一度お試しください。",
   "aiTitle": "AI",
+  "@aiToolRan": {
+    "placeholders": {
+      "tools": {}
+    }
+  },
+  "aiToolRan": "{tools} を実行",
   "@aiUnknownModel": {
     "placeholders": {
       "model": {}

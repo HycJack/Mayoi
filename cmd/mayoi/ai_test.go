@@ -2,45 +2,50 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 
 	"mayoi/internal/ai"
+	"mayoi/locales"
 
 	piai "github.com/HycJack/pi-ai-go"
+	"github.com/HycJack/pi-ai-go/agent"
+	"github.com/HycJack/pi-ai-go/core"
 	"github.com/egoist/mygo/ui"
 )
 
-// fakeStream replaces the assistant's stream for a test: it says reply
-// piece by piece, and reports err after them. A nil reply hangs until the
-// context is cancelled, as a model that thinks for long, and says reply
-// first if it has one.
-func (hs *harness) fakeStream(reply []string, err error) *[]ai.Request {
+// fakeStream replaces the assistant's run for a test: it says reply piece
+// by piece, and reports err after them. A nil reply hangs until the
+// context is cancelled, as a model that thinks for long.
+func (hs *harness) fakeStream(reply []string, err error) *[]ai.Run {
 	hs.t.Helper()
-	var sent []ai.Request
+	var sent []ai.Run
 	asked := &sent
 	a := hs.a
-	old := a.stream
-	a.stream = func(ctx context.Context, req ai.Request, onText func(string)) (string, error) {
-		sent = append(sent, req)
+	old := a.loop
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		sent = append(sent, r)
 		for _, s := range reply {
 			if ctx.Err() != nil {
-				return "", ctx.Err()
+				return nil, ctx.Err()
 			}
-			onText(s)
+			onStep(ai.Step{Message: s})
 		}
 		if reply == nil && err == nil {
 			// A model that thinks for long: nothing until it is stopped.
 			<-ctx.Done()
-			return "", ctx.Err()
+			return nil, ctx.Err()
 		}
-		return strings.Join(reply, ""), err
+		return nil, err
 	}
 	hs.t.Cleanup(func() {
-		a.stream = old
-		// A stream left waiting would hold the harness's settle up.
+		a.loop = old
+		// A run left waiting would hold the harness's settle up.
 		a.ai.cancel()
 	})
 	// The assistant asks a model the settings chose, so the keys of this
@@ -125,8 +130,8 @@ func TestTheAssistantSendsWhatWasTyped(t *testing.T) {
 	if len(*sent) != 1 {
 		t.Fatalf("sent %d requests", len(*sent))
 	}
-	if got := *sent; got[0].Messages[len(got[0].Messages)-1].(piai.UserMessage).Content != "what is this" {
-		t.Errorf("sent %+v", got[0].Messages)
+	if got := *sent; got[0].Prompt != "what is this" {
+		t.Errorf("the prompt is %q", got[0].Prompt)
 	}
 	if len(a.ai.msgs) != 2 || a.ai.msgs[0].role != "user" || a.ai.msgs[0].text != "what is this" {
 		t.Fatalf("the conversation is %+v", a.ai.msgs)
@@ -186,12 +191,12 @@ func TestStoppingKeepsWhatWasSaidAndTakesNoMore(t *testing.T) {
 	release := make(chan struct{})
 	var once sync.Once
 	letGo := func() { once.Do(func() { close(release) }) }
-	a.stream = func(ctx context.Context, req ai.Request, onText func(string)) (string, error) {
-		onText("Half an ")
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		onStep(ai.Step{Message: "Half an "})
 		<-release
-		onText("answer.")
+		onStep(ai.Step{Message: "answer."})
 		<-ctx.Done()
-		return "Half an answer.", ctx.Err()
+		return nil, ctx.Err()
 	}
 	t.Cleanup(letGo)
 	a.toggleAI()
@@ -225,4 +230,130 @@ func TestStoppingKeepsWhatWasSaidAndTakesNoMore(t *testing.T) {
 	if len(a.ai.msgs) != 2 {
 		t.Errorf("the conversation is %+v", a.ai.msgs)
 	}
+}
+
+func TestTheAssistantUsesTheFolderTools(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	var got ai.Run
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		got = r
+		return nil, nil
+	}
+	hs.ask("what is in main.go")
+	var names []string
+	for _, tool := range got.Tools {
+		names = append(names, tool.Name)
+	}
+	if strings.Join(names, " ") != "read glob grep write edit open_file" {
+		t.Errorf("the tools are %q", names)
+	}
+	if got.Model.ID != "faux-1" || got.APIKey != "test-key" {
+		t.Errorf("the run is %+v", got)
+	}
+	if got.Prompt != "what is in main.go" {
+		t.Errorf("the prompt is %q", got.Prompt)
+	}
+}
+
+func TestTheAssistantAsksBeforeItWrites(t *testing.T) {
+	hs := newHarness(t, true)
+	a, root := hs.a, hs.root
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		// The model calls write, which waits for the card.
+		for _, tool := range r.Tools {
+			if tool.Name != "write" {
+				continue
+			}
+			res, err := tool.Execute(ctx, "call-1", json.RawMessage(`{"path": "new.txt", "content": "hi\n"}`), nil)
+			if err != nil {
+				return nil, err
+			}
+			onStep(ai.Step{Message: saidBy(t, res)})
+		}
+		return nil, nil
+	}
+	a.toggleAI()
+	hs.settle()
+	hs.tt.Type("add new.txt")
+	hs.settle()
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	// The tool waits for the card, so the harness must not settle on it.
+	for i := 0; i < 200 && a.ai.approval == nil; i++ {
+		step(hs.tt)
+	}
+	if a.ai.approval == nil {
+		t.Fatal("no approval card")
+	}
+	if !hs.tt.HasText("new.txt") {
+		t.Errorf("the card does not name the file: %q", hs.tt.Texts())
+	}
+	if err := hs.tt.Click(locales.AiApprove()); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 50; i++ {
+		step(hs.tt)
+	}
+	if _, err := os.Stat(filepath.Join(root, "new.txt")); err != nil {
+		t.Errorf("the file was not written: %v", err)
+	}
+}
+
+func TestRejectingTheCardWritesNothing(t *testing.T) {
+	hs := newHarness(t, true)
+	a, root := hs.a, hs.root
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		for _, tool := range r.Tools {
+			if tool.Name != "write" {
+				continue
+			}
+			res, _ := tool.Execute(ctx, "call-1", json.RawMessage(`{"path": "new.txt", "content": "hi\n"}`), nil)
+			onStep(ai.Step{Message: saidBy(t, res)})
+		}
+		return nil, nil
+	}
+	a.toggleAI()
+	hs.settle()
+	hs.tt.Type("add new.txt")
+	hs.settle()
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	for i := 0; i < 200 && a.ai.approval == nil; i++ {
+		step(hs.tt)
+	}
+	if a.ai.approval == nil {
+		t.Fatal("no approval card")
+	}
+	if err := hs.tt.Click(locales.AiReject()); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 50; i++ {
+		step(hs.tt)
+	}
+	if _, err := os.Stat(filepath.Join(root, "new.txt")); !os.IsNotExist(err) {
+		t.Error("a rejected write wrote the file")
+	}
+	if !hs.tt.HasText("rejected") {
+		t.Errorf("the answer does not say it was rejected: %q", hs.tt.Texts())
+	}
+}
+
+// saidBy is what a tool result says.
+func saidBy(t *testing.T, r agent.AgentToolResult) string {
+	t.Helper()
+	var sb strings.Builder
+	for _, b := range r.Content {
+		if tc, ok := b.(core.TextContent); ok {
+			sb.WriteString(tc.Text)
+		}
+	}
+	return sb.String()
 }

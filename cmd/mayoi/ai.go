@@ -3,7 +3,10 @@ package main
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -12,14 +15,17 @@ import (
 	"mayoi/locales"
 
 	piai "github.com/HycJack/pi-ai-go"
+	"github.com/HycJack/pi-ai-go/agent"
+	"github.com/HycJack/pi-ai-go/core"
 	"github.com/egoist/mygo/ui"
 )
 
 // aiMinW is the least the assistant's panel is wide.
 const aiMinW = 240
 
-// aiStream is how the assistant asks a model: ai.Live, or a test's own.
-type aiStream = ai.Stream
+// aiLoop runs a message through a model and its tools: ai.Loop, or a
+// test's own.
+type aiLoop func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error)
 
 // aiChatSystem is what the assistant is told of itself, before the folder.
 const aiChatSystem = "You are Mayoi's assistant, helping with the code of the folder open in the editor."
@@ -37,6 +43,12 @@ type aiPanel struct {
 	keyed ui.Handle
 	// writing is the answer under way, nil when the assistant is idle.
 	writing *aiReply
+	// approval is a write waiting for Approve or Reject, nil when there
+	// is none.
+	approval *aiApproval
+	// outOfSteps says the last run stopped at its cap, not because it
+	// was done.
+	outOfSteps bool
 	// err is what the panel says of the last failure, ready to show.
 	err string
 	// shown says the panel has drawn itself once, so a window restored
@@ -51,6 +63,15 @@ type aiMessage struct {
 	text string
 	// stopped says the user stopped this answer before it said anything.
 	stopped bool
+	// tools are the tools the assistant called while saying it.
+	tools []string
+}
+
+// aiApproval is a write waiting for its answer: the change, and where the
+// answer goes.
+type aiApproval struct {
+	change ai.Change
+	reply  chan bool
 }
 
 // aiReply is an answer under way: cancel stops it, its identity tells a
@@ -139,23 +160,30 @@ func (a *app) send() {
 	ctx, cancel := context.WithCancel(context.Background())
 	w := &aiReply{ctx: ctx, cancel: cancel, at: last}
 	p.writing = w
-	stream := a.stream
-	req := ai.Request{
+	tools := a.aiTools()
+	run := ai.Run{
 		Model:    model,
 		APIKey:   key,
 		System:   aiChatSystem,
+		Prompt:   text,
 		Messages: ai.Transcript(spoken(p.msgs[:last])),
+		Tools:    append(tools.Sets(), a.aiOpenTool()),
 	}
+	loop := a.loop
 	bg.Go(func() {
 		defer recoverCrash()
 		// Only post from here: the panel's state belongs to the main
-		// thread, and the tools of a later milestone too.
-		_, err := stream(ctx, req, func(s string) {
+		// thread, and the tools read and write the folder from it.
+		msgs, err := loop(ctx, run, func(s ai.Step) {
 			a.post(func() {
 				if p.writing != w {
 					return
 				}
-				p.msgs[last].text += s
+				p.msgs[last].text += s.Message
+				p.msgs[last].tools = append(p.msgs[last].tools, s.ToolCalls...)
+				if s.OutOfSteps {
+					p.outOfSteps = true
+				}
 			})
 		})
 		// A stop is not a failure: the user asked for it. It was already
@@ -170,8 +198,107 @@ func (a *app) send() {
 			if err != nil && !stopped {
 				p.err = a.aiSaid(err)
 			}
+			// A model that answers in one piece sends no deltas: the
+			// answer is what it said last.
+			if p.msgs[last].text == "" && !stopped {
+				p.msgs[last].text = lastSaid(msgs)
+			}
+			// What the assistant wrote shows in the tabs that have it.
+			if wrote := tools.Wrote(); len(wrote) > 0 {
+				a.diskChanged(wrote, nil)
+			}
 		})
 	})
+	a.invalidate()
+}
+
+// lastSaid is what the last answer of a run said.
+func lastSaid(msgs []piai.Message) string {
+	for i := len(msgs) - 1; i >= 0; i-- {
+		m, ok := msgs[i].(piai.AssistantMessage)
+		if !ok {
+			continue
+		}
+		var sb strings.Builder
+		for _, b := range m.Content {
+			if tc, ok := b.(piai.TextContent); ok {
+				sb.WriteString(tc.Text)
+			}
+		}
+		if sb.Len() > 0 {
+			return sb.String()
+		}
+	}
+	return ""
+}
+
+// aiTools are the assistant's tools, rooted at the window's folder, with
+// the panel asked before each write.
+func (a *app) aiTools() *ai.Tools {
+	t := &ai.Tools{Root: a.root}
+	if !a.settings.AI.ApproveEdits {
+		t.Approve = a.askApproval
+	}
+	return t
+}
+
+// aiOpenParams is what open_file is asked: the file, and its line.
+type aiOpenParams struct {
+	Path string `json:"path"`
+	Line int    `json:"line,omitempty"`
+}
+
+// aiOpenTool is the tool that shows a file of the folder in the editors,
+// at its line, so that the user sees what the assistant explains.
+func (a *app) aiOpenTool() agent.AgentTool {
+	return agent.AgentTool{
+		Name:        "open_file",
+		Description: "Open a file of the folder in the editor, at a line, so the user sees it.",
+		Label:       "Open",
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"},"line":{"type":"integer"}},"required":["path"]}`),
+		Execute: func(ctx context.Context, id string, params json.RawMessage, onUpdate func(json.RawMessage)) (agent.AgentToolResult, error) {
+			var p aiOpenParams
+			if err := json.Unmarshal(params, &p); err != nil {
+				return told(err), nil
+			}
+			full, err := ai.Under(a.root, p.Path)
+			if err != nil {
+				return told(err), nil
+			}
+			a.post(func() { a.openFileAt(full, p.Line, true) })
+			return agent.AgentToolResult{
+				Content: []core.ContentBlock{core.TextContent{Type: "text", Text: "opened " + p.Path}},
+			}, nil
+		},
+	}
+}
+
+// told is a failure the model reads.
+func told(err error) agent.AgentToolResult {
+	return agent.AgentToolResult{
+		Content: []core.ContentBlock{core.TextContent{Type: "text", Text: err.Error()}},
+		IsError: true,
+	}
+}
+
+// askApproval shows the change and waits for Approve or Reject. It runs on
+// a tool's goroutine, so it only posts to the panel.
+func (a *app) askApproval(c ai.Change) bool {
+	reply := make(chan bool, 1)
+	a.post(func() {
+		a.ai.approval = &aiApproval{change: c, reply: reply}
+	})
+	return <-reply
+}
+
+// answered takes the answer to the card shown, and shows no card after.
+func (a *app) answered(ok bool) {
+	p := &a.ai
+	if p.approval == nil {
+		return
+	}
+	p.approval.reply <- ok
+	p.approval = nil
 	a.invalidate()
 }
 
@@ -279,6 +406,7 @@ func (a *app) aiSidePanel(c *ui.Context) {
 		}
 		a.aiTitleRow(c)
 		a.aiTranscript(c)
+		a.aiApprovalCard(c)
 		if a.ai.err != "" {
 			ui.Text(c, a.ai.err).FontSize(12).TextColor(p.dangerText).Padding(0, 10, 6, 10)
 		}
@@ -325,9 +453,79 @@ func (a *app) aiTranscript(c *ui.Context) {
 				case msg.text != "":
 					ui.Text(c, msg.text).FontSize(12.5).TextColor(p.text)
 				}
+				if len(msg.tools) > 0 {
+					ui.Text(c, locales.AiToolRan(strings.Join(msg.tools, ", "))).FontSize(11).
+						TextColor(p.faint).SingleLine()
+				}
 			})
 		}
+		if ai.outOfSteps {
+			ui.Text(c, locales.AiStepsOut()).FontSize(11).TextColor(p.muted).Padding(6, 8)
+		}
 	})
+}
+
+// aiApprovalCard is a write waiting for Approve or Reject, with the lines
+// it changes.
+func (a *app) aiApprovalCard(c *ui.Context) {
+	p := a.pal
+	ap := a.ai.approval
+	if ap == nil {
+		return
+	}
+	ui.Column(c.Key("ai-approval")).Margin(6).Padding(8).Gap(6).Radius(6).
+		Background(p.surface).Border(1, p.border).Children(func() {
+		ui.Text(c, locales.AiApproveTitle()).FontSize(11).FontWeight(600).TextColor(p.muted).SingleLine()
+		ui.Text(c, filepath.Base(ap.change.Path)).FontSize(12.5).TextColor(p.text).SingleLine()
+		if d := changedLines(ap.change.Before, ap.change.After); d != "" {
+			ui.Scroll(c.Key("ai-approval-diff")).MaxHeight(160).Children(func() {
+				for _, line := range strings.Split(d, "\n") {
+					col := p.text
+					switch {
+					case strings.HasPrefix(line, "+ "):
+						col = p.addedFg
+					case strings.HasPrefix(line, "- "):
+						col = p.removedFg
+					}
+					ui.Text(c, line).FontSize(11.5).TextColor(col).SingleLine()
+				}
+			})
+		}
+		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			reject := ui.Button(c, locales.AiReject())
+			reject.FontSize(12).Padding(6, 8)
+			if reject.Clicked() {
+				a.post(func() { a.answered(false) })
+			}
+			approve := ui.Button(c, locales.AiApprove())
+			approve.FontSize(12).Padding(6, 8)
+			if approve.Clicked() {
+				a.post(func() { a.answered(true) })
+			}
+		})
+	})
+}
+
+// changedLines are the lines a change adds or removes, signed, at most 80
+// of them.
+func changedLines(before, after []byte) string {
+	old := strings.Split(strings.TrimSuffix(string(before), "\n"), "\n")
+	new := strings.Split(strings.TrimSuffix(string(after), "\n"), "\n")
+	var out []string
+	for _, line := range new {
+		if !slices.Contains(old, line) {
+			out = append(out, "+ "+line)
+		}
+	}
+	for _, line := range old {
+		if !slices.Contains(new, line) {
+			out = append(out, "- "+line)
+		}
+	}
+	if len(out) > 80 {
+		out = append(out[:80], "…")
+	}
+	return strings.Join(out, "\n")
 }
 
 // aiCompose is the field what is asked is typed in.

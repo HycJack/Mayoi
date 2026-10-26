@@ -251,6 +251,8 @@
   "agoMinutes": "{count, plural, one {# minute ago} other {# minutes ago}}",
   "agoMonths": "{count, plural, one {# month ago} other {# months ago}}",
   "agoYears": "{count, plural, one {# year ago} other {# years ago}}",
+  "aiApprove": "Approve",
+  "aiApproveTitle": "The assistant wants to change",
   "aiChatFailed": "The assistant failed: {error}",
   "aiEmpty": "Ask about the code in this folder.",
   "aiFailed": "Couldn't write the message: {error}",
@@ -265,10 +267,18 @@
   },
   "aiNoKeyFor": "Add an API key for {provider} to ai-keys.json: the settings name it.",
   "aiPlaceholder": "Ask the assistant",
+  "aiReject": "Reject",
   "aiStop": "Stop",
   "aiStopped": "Stopped.",
+  "aiStepsOut": "It stopped after 24 steps. Ask again to go on.",
   "aiTimedOut": "The AI took too long to answer. Try again.",
   "aiTitle": "AI",
+  "@aiToolRan": {
+    "placeholders": {
+      "tools": {}
+    }
+  },
+  "aiToolRan": "Ran {tools}",
   "@aiUnknownModel": {
     "placeholders": {
       "model": {}

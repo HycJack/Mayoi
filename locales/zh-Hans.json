@@ -8,6 +8,8 @@
   "agoMinutes": "{count} 分钟前",
   "agoMonths": "{count} 个月前",
   "agoYears": "{count} 年前",
+  "aiApprove": "允许",
+  "aiApproveTitle": "助手想改动",
   "aiChatFailed": "助手出错了：{error}",
   "aiEmpty": "问问这个文件夹里的代码。",
   "aiFailed": "无法撰写信息：{error}",
@@ -22,10 +24,18 @@
   },
   "aiNoKeyFor": "请在 ai-keys.json 里为 {provider} 添加 API key：设置里指定的是它。",
   "aiPlaceholder": "问助手",
+  "aiReject": "拒绝",
   "aiStop": "停止",
   "aiStopped": "已停止。",
+  "aiStepsOut": "走满 24 步就停下了，再问一次可以接着做。",
   "aiTimedOut": "AI 响应时间过长，请重试。",
   "aiTitle": "AI",
+  "@aiToolRan": {
+    "placeholders": {
+      "tools": {}
+    }
+  },
+  "aiToolRan": "运行了 {tools}",
   "@aiUnknownModel": {
     "placeholders": {
       "model": {}

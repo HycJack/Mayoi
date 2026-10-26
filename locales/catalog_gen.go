@@ -265,6 +265,26 @@ func (msgs Messages) AgoYears(count int) string {
 	return Catalog.Format(msgs.locale, "agoYears", map[string]any{"count": count})
 }
 
+// AiApprove says "Approve"
+// in the language the app shows.
+func AiApprove() string { return In(i18n.Locale()).AiApprove() }
+
+// AiApprove says "Approve"
+// in the language of msgs.
+func (msgs Messages) AiApprove() string {
+	return Catalog.Format(msgs.locale, "aiApprove", nil)
+}
+
+// AiApproveTitle says "The assistant wants to change"
+// in the language the app shows.
+func AiApproveTitle() string { return In(i18n.Locale()).AiApproveTitle() }
+
+// AiApproveTitle says "The assistant wants to change"
+// in the language of msgs.
+func (msgs Messages) AiApproveTitle() string {
+	return Catalog.Format(msgs.locale, "aiApproveTitle", nil)
+}
+
 // AiChatFailed says "The assistant failed: {error}"
 // in the language the app shows.
 func AiChatFailed(error string) string { return In(i18n.Locale()).AiChatFailed(error) }
@@ -355,6 +375,16 @@ func (msgs Messages) AiPlaceholder() string {
 	return Catalog.Format(msgs.locale, "aiPlaceholder", nil)
 }
 
+// AiReject says "Reject"
+// in the language the app shows.
+func AiReject() string { return In(i18n.Locale()).AiReject() }
+
+// AiReject says "Reject"
+// in the language of msgs.
+func (msgs Messages) AiReject() string {
+	return Catalog.Format(msgs.locale, "aiReject", nil)
+}
+
 // AiStop says "Stop"
 // in the language the app shows.
 func AiStop() string { return In(i18n.Locale()).AiStop() }
@@ -375,6 +405,16 @@ func (msgs Messages) AiStopped() string {
 	return Catalog.Format(msgs.locale, "aiStopped", nil)
 }
 
+// AiStepsOut says "It stopped after 24 steps. Ask again to go on."
+// in the language the app shows.
+func AiStepsOut() string { return In(i18n.Locale()).AiStepsOut() }
+
+// AiStepsOut says "It stopped after 24 steps. Ask again to go on."
+// in the language of msgs.
+func (msgs Messages) AiStepsOut() string {
+	return Catalog.Format(msgs.locale, "aiStepsOut", nil)
+}
+
 // AiTimedOut says "The AI took too long to answer. Try again."
 // in the language the app shows.
 func AiTimedOut() string { return In(i18n.Locale()).AiTimedOut() }
@@ -393,6 +433,16 @@ func AiTitle() string { return In(i18n.Locale()).AiTitle() }
 // in the language of msgs.
 func (msgs Messages) AiTitle() string {
 	return Catalog.Format(msgs.locale, "aiTitle", nil)
+}
+
+// AiToolRan says "Ran {tools}"
+// in the language the app shows.
+func AiToolRan(tools string) string { return In(i18n.Locale()).AiToolRan(tools) }
+
+// AiToolRan says "Ran {tools}"
+// in the language of msgs.
+func (msgs Messages) AiToolRan(tools string) string {
+	return Catalog.Format(msgs.locale, "aiToolRan", map[string]any{"tools": tools})
 }
 
 // AiUnknownModel says "{model} is not a model the assistant knows."

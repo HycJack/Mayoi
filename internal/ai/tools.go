@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/HycJack/pi-ai-go/agent"
 	"github.com/HycJack/pi-ai-go/core"
@@ -23,6 +25,29 @@ type Tools struct {
 	Root string
 	// Approve is asked before a write, nil to allow every one.
 	Approve func(Change) bool
+
+	mu      sync.Mutex
+	written []string
+}
+
+// Wrote is the files the tools changed, for the tabs that have them.
+func (t *Tools) Wrote() []string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return slices.Clone(t.written)
+}
+
+// kept notes a file the tools changed.
+func (t *Tools) kept(path string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.written = append(t.written, path)
+}
+
+// Sets is every tool the folder allows: the ones that read it and the
+// ones that write it.
+func (t *Tools) Sets() []agent.AgentTool {
+	return append(t.ReadSet(), t.WriteSet()...)
 }
 
 // Change is what the assistant wants to do that the user must allow: a
@@ -311,6 +336,7 @@ func (t *Tools) Write(ctx context.Context, id string, params json.RawMessage, on
 	if _, err := vfs.WriteFile(full, c.After, 0o644); err != nil {
 		return failure(err), nil
 	}
+	t.kept(full)
 	return text("wrote " + p.Path), nil
 }
 
@@ -340,6 +366,7 @@ func (t *Tools) Edit(ctx context.Context, id string, params json.RawMessage, onU
 	if _, err := vfs.WriteFile(full, c.After, 0o644); err != nil {
 		return failure(err), nil
 	}
+	t.kept(full)
 	return text("edited " + p.Path), nil
 }
 

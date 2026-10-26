@@ -1,8 +1,6 @@
 package ai
 
 import (
-	"context"
-	"strings"
 	"testing"
 
 	piai "github.com/HycJack/pi-ai-go"
@@ -19,23 +17,6 @@ func fauxModel(t *testing.T) piai.Model {
 		ID: "faux-1", API: "faux", Provider: "faux",
 		ContextWindow: 100_000, MaxTokens: 4096,
 		Input: []piai.Modality{piai.ModalityText},
-	}
-}
-
-func TestLiveStreamsTheAnswer(t *testing.T) {
-	var got strings.Builder
-	text, err := Live(context.Background(), Request{
-		Model:    fauxModel(t),
-		Messages: Transcript([]Message{{Role: "user", Text: "hi"}}),
-	}, func(s string) { got.WriteString(s) })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if text == "" || got.String() != text {
-		t.Fatalf("text %q, deltas %q", text, got.String())
-	}
-	if !strings.Contains(text, "hi") {
-		t.Errorf("the answer %q does not answer %q", text, "hi")
 	}
 }
 
