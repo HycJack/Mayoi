@@ -375,6 +375,16 @@ func (msgs Messages) AiTitle() string {
 	return Catalog.Format(msgs.locale, "aiTitle", nil)
 }
 
+// AiYou says "You"
+// in the language the app shows.
+func AiYou() string { return In(i18n.Locale()).AiYou() }
+
+// AiYou says "You"
+// in the language of msgs.
+func (msgs Messages) AiYou() string {
+	return Catalog.Format(msgs.locale, "aiYou", nil)
+}
+
 // AlertCaution says "Caution"
 // in the language the app shows.
 func AlertCaution() string { return In(i18n.Locale()).AlertCaution() }
