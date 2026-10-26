@@ -197,6 +197,15 @@ type Prefs struct {
 	// the preferences, "settings.json" for all of them, and
 	// "keybindings.json" for the keyboard shortcuts.
 	SyncIgnored []string `json:"syncIgnored,omitempty"`
+	// AI is the assistant's model. Its keys are secrets, and live in
+	// AIPath beside this file rather than here, which the account syncs.
+	AI AISettings `json:"ai,omitempty"`
+}
+
+// AISettings is the AI assistant's settings, which hold no secrets.
+type AISettings struct {
+	Provider string `json:"provider,omitempty"`
+	Model    string `json:"model,omitempty"`
 }
 
 // TabStyle is a project's own look on the rail: Label, up to two
@@ -319,10 +328,14 @@ type Layout struct {
 	// at first, and CommitFilesWidth is how wide it is.
 	CommitFilesOpen  bool    `json:"commitFilesOpen,omitempty"`
 	CommitFilesWidth float32 `json:"commitFilesWidth,omitempty"`
+	// AIOpen shows the AI assistant's panel at the right of the window,
+	// and AIWidth is how wide it is.
+	AIOpen  bool    `json:"aiOpen,omitempty"`
+	AIWidth float32 `json:"aiWidth,omitempty"`
 }
 
 // DefaultLayout is the layout of a first launch.
-var DefaultLayout = Layout{SidebarWidth: 248, PanelHeight: 260, PanelWidth: 400, CommitFilesWidth: 240}
+var DefaultLayout = Layout{SidebarWidth: 248, PanelHeight: 260, PanelWidth: 400, CommitFilesWidth: 240, AIWidth: 360}
 
 // Normalize keeps the layout in its bounds, as base has it where it has
 // none, as a session an older version kept.
@@ -336,9 +349,13 @@ func (l *Layout) Normalize(base Layout) {
 	if l.CommitFilesWidth == 0 {
 		l.CommitFilesWidth = base.CommitFilesWidth
 	}
+	if l.AIWidth == 0 {
+		l.AIWidth = base.AIWidth
+	}
 	l.SidebarWidth = clamp(l.SidebarWidth, 160, 600)
 	l.PanelWidth = clamp(l.PanelWidth, 160, 2000)
 	l.CommitFilesWidth = clamp(l.CommitFilesWidth, 140, 800)
+	l.AIWidth = clamp(l.AIWidth, 240, 1200)
 	l.PanelHeight = clamp(l.PanelHeight, 100, 2000)
 }
 
@@ -531,6 +548,12 @@ func (s *Settings) migrate(old legacy) {
 
 // Path is the file the settings are kept in, "" for none.
 func (s *Settings) Path() string { return s.path }
+
+// AIPath is the file of the assistant's API keys, beside the settings:
+// they are secrets, and the account syncs the settings.
+func (s *Settings) AIPath() string {
+	return filepath.Join(filepath.Dir(s.path), "ai-keys.json")
+}
 
 // NewWindow keeps a new window, focused first, and names its frame by
 // the first ID no other window has. It is laid out as the window focused

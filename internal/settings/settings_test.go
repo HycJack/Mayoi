@@ -488,3 +488,27 @@ func TestEdited(t *testing.T) {
 		t.Error("an edit taken is an edit again")
 	}
 }
+
+func TestTheAssistantOpensAtItsWidth(t *testing.T) {
+	s := Load(filepath.Join(t.TempDir(), "s.json"))
+	w := s.NewWindow()
+	if w.AIWidth != DefaultLayout.AIWidth || w.AIWidth == 0 {
+		t.Errorf("the assistant is %.0f wide", w.AIWidth)
+	}
+	if w.AIOpen {
+		t.Error("the assistant starts open")
+	}
+	w.AIOpen, w.AIWidth = true, 420
+	s.Flush()
+	got := Load(s.path)
+	if !got.Windows[0].AIOpen || got.Windows[0].AIWidth != 420 {
+		t.Errorf("loaded %+v", got.Windows[0].Layout)
+	}
+}
+
+func TestTheAssistantPathIsBesideTheSettings(t *testing.T) {
+	s := Load(filepath.Join("where", "settings.json"))
+	if got, want := s.AIPath(), filepath.Join("where", "ai-keys.json"); got != want {
+		t.Errorf("the keys are at %q, want %q", got, want)
+	}
+}
