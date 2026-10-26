@@ -8,6 +8,7 @@ tool (
 )
 
 require (
+	github.com/HycJack/pi-ai-go v0.0.0
 	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/dop251/goja v0.0.0-20261024144015-2a9269b6b6de
 	github.com/ebitengine/purego v0.11.1
