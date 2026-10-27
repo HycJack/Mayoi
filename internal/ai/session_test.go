@@ -1,17 +1,37 @@
 package ai
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+
+	piai "github.com/HycJack/pi-ai-go"
 )
+
+// words is a conversation of words as history: a chat that called no tool,
+// which is most of them.
+func words(msgs ...Message) []piai.Message {
+	out := make([]piai.Message, 0, len(msgs))
+	for _, m := range msgs {
+		if m.Role == "user" {
+			out = append(out, piai.UserMessage{Role: "user", Content: m.Text})
+			continue
+		}
+		out = append(out, piai.AssistantMessage{
+			Role:    "assistant",
+			Content: []piai.ContentBlock{piai.TextContent{Type: "text", Text: m.Text}},
+		})
+	}
+	return out
+}
 
 func TestASavedChatComesBack(t *testing.T) {
 	s := Sessions{Dir: filepath.Join(t.TempDir(), "ai-sessions")}
-	id, err := s.Save("", "Fix the parser", []Message{
-		{Role: "user", Text: "the parser fails"},
-		{Role: "assistant", Text: "it does"},
-	})
+	id, err := s.Save("", "Fix the parser", words(
+		Message{Role: "user", Text: "the parser fails"},
+		Message{Role: "assistant", Text: "it does"},
+	))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,16 +57,53 @@ func TestASavedChatComesBack(t *testing.T) {
 	}
 }
 
-func TestSavingAChatAgainReplacesIt(t *testing.T) {
+func TestAChatKeepsWhatTheToolsDid(t *testing.T) {
 	s := Sessions{Dir: t.TempDir()}
-	id, err := s.Save("", "One", []Message{{Role: "user", Text: "hi"}})
+	history := []piai.Message{
+		piai.UserMessage{Role: "user", Content: "what is in main.go"},
+		piai.AssistantMessage{Role: "assistant", Content: []piai.ContentBlock{
+			piai.TextContent{Type: "text", Text: "Let me look."},
+			piai.ToolCall{Type: "tool_use", ID: "c1", Name: "read", Arguments: json.RawMessage(`{"path":"main.go"}`)},
+		}},
+		piai.ToolResultMessage{Role: "toolResult", ToolCallID: "c1", ToolName: "read",
+			Content: []piai.ContentBlock{piai.TextContent{Type: "text", Text: "package main"}}},
+		piai.AssistantMessage{Role: "assistant", Content: []piai.ContentBlock{
+			piai.TextContent{Type: "text", Text: "It is a main."},
+		}},
+	}
+	id, err := s.Save("", "what is in main.go", history)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Save(id, "Two", []Message{
-		{Role: "user", Text: "hi"},
-		{Role: "assistant", Text: "hello"},
-	}); err != nil {
+	back, err := s.Load(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The model's conversation comes back whole: the same assistant can
+	// go on reading without reading main.go again.
+	if len(back.History) != len(history) {
+		t.Fatalf("the history has %d messages: %+v", len(back.History), back.History)
+	}
+	result, ok := back.History[2].(piai.ToolResultMessage)
+	if !ok || result.ToolName != "read" || saidText(result.Content) != "package main" {
+		t.Errorf("the tool's result is %+v", back.History[2])
+	}
+	// The panel shows the tool that ran, not its result.
+	if len(back.Msgs) != 3 || len(back.Msgs[1].Tools) != 1 || back.Msgs[1].Tools[0] != "read" {
+		t.Errorf("the chat shows %+v", back.Msgs)
+	}
+}
+
+func TestSavingAChatAgainReplacesIt(t *testing.T) {
+	s := Sessions{Dir: t.TempDir()}
+	id, err := s.Save("", "One", words(Message{Role: "user", Text: "hi"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Save(id, "Two", words(
+		Message{Role: "user", Text: "hi"},
+		Message{Role: "assistant", Text: "hello"},
+	)); err != nil {
 		t.Fatal(err)
 	}
 	chats, err := s.List()
@@ -78,7 +135,7 @@ func TestAFolderWithNoChatsHasNone(t *testing.T) {
 func TestAJunkFileIsNotAChat(t *testing.T) {
 	dir := t.TempDir()
 	s := Sessions{Dir: dir}
-	if _, err := s.Save("", "One", []Message{{Role: "user", Text: "hi"}}); err != nil {
+	if _, err := s.Save("", "One", words(Message{Role: "user", Text: "hi"})); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "broken.jsonl"), []byte("not json\n"), 0o600); err != nil {
@@ -95,11 +152,11 @@ func TestAJunkFileIsNotAChat(t *testing.T) {
 
 func TestTheNewestChatIsFirst(t *testing.T) {
 	s := Sessions{Dir: t.TempDir()}
-	first, err := s.Save("", "Older", []Message{{Role: "user", Text: "one"}})
+	first, err := s.Save("", "Older", words(Message{Role: "user", Text: "one"}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := s.Save("", "Newer", []Message{{Role: "user", Text: "two"}})
+	second, err := s.Save("", "Newer", words(Message{Role: "user", Text: "two"}))
 	if err != nil {
 		t.Fatal(err)
 	}

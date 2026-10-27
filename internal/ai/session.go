@@ -17,7 +17,13 @@ type Chat struct {
 	ID    string
 	Title string
 	When  time.Time
-	Msgs  []Message
+	// Msgs is what the panel shows: the turns of the conversation, with
+	// the tools each answer called.
+	Msgs []Message
+	// History is the conversation as the model took it, tool calls and
+	// their results included: asking again after opening a chat is
+	// asking the same assistant that read those files.
+	History []piai.Message
 }
 
 // Sessions are the conversations of a folder, one JSONL file each, in
@@ -27,9 +33,9 @@ type Sessions struct {
 	Dir string
 }
 
-// Save writes msgs as the chat id, or as a new one when id is empty, and
-// returns the id it used.
-func (s Sessions) Save(id, title string, msgs []Message) (string, error) {
+// Save writes the conversation as the chat id, or as a new one when id is
+// empty, and returns the id it used.
+func (s Sessions) Save(id, title string, history []piai.Message) (string, error) {
 	if err := os.MkdirAll(s.Dir, 0o700); err != nil {
 		return "", err
 	}
@@ -40,13 +46,13 @@ func (s Sessions) Save(id, title string, msgs []Message) (string, error) {
 	entries := []session.SessionTreeEntry{
 		{Type: session.EntrySessionInfo, SessionID: id, Description: title, Timestamp: time.Now().UTC()},
 	}
-	for _, m := range msgs {
-		if m.Text == "" {
+	for _, m := range history {
+		if m == nil {
 			continue
 		}
 		entries = append(entries, session.SessionTreeEntry{
 			Type:      session.EntryMessage,
-			Message:   asMessage(m),
+			Message:   m,
 			Timestamp: time.Now().UTC(),
 		})
 	}
@@ -83,7 +89,8 @@ func (s Sessions) Load(id string) (Chat, error) {
 	if err != nil {
 		return Chat{}, err
 	}
-	chat := Chat{ID: id, Msgs: msgsOf(entries)}
+	chat := Chat{ID: id, History: historyOf(entries)}
+	chat.Msgs = Displays(chat.History)
 	for _, e := range entries {
 		if e.Type == session.EntrySessionInfo && e.Description != "" {
 			chat.Title = e.Description
@@ -130,54 +137,23 @@ func (s Sessions) read(id string) ([]session.SessionTreeEntry, error) {
 	return storage.ReadAll()
 }
 
-// asMessage is a message of the panel as pi-ai-go takes it.
-func asMessage(m Message) piai.Message {
-	out := Transcript([]Message{m})
-	if len(out) == 0 {
-		return piai.UserMessage{Role: "user", Content: m.Text}
-	}
-	return out[0]
-}
-
-// msgsOf is what the entries say, in the words the panel shows.
-func msgsOf(entries []session.SessionTreeEntry) []Message {
-	out := make([]Message, 0, len(entries))
+// historyOf is the conversation the entries keep, as the model takes it.
+func historyOf(entries []session.SessionTreeEntry) []piai.Message {
+	out := make([]piai.Message, 0, len(entries))
 	for _, e := range entries {
 		if e.Type != session.EntryMessage {
 			continue
 		}
 		switch m := e.Message.(type) {
 		case piai.UserMessage:
-			out = append(out, Message{Role: "user", Text: saidText(m.Content)})
+			out = append(out, m)
 		case piai.AssistantMessage:
-			var texts []string
-			for _, b := range m.Content {
-				if tc, ok := b.(piai.TextContent); ok {
-					texts = append(texts, tc.Text)
-				}
-			}
-			out = append(out, Message{Role: "assistant", Text: strings.Join(texts, "")})
+			out = append(out, m)
+		case piai.ToolResultMessage:
+			out = append(out, m)
 		}
 	}
 	return out
-}
-
-// saidText is the text of a user message, which may be a plain string or
-// blocks.
-func saidText(content any) string {
-	switch c := content.(type) {
-	case string:
-		return c
-	case []piai.ContentBlock:
-		var texts []string
-		for _, b := range c {
-			if tc, ok := b.(piai.TextContent); ok {
-				texts = append(texts, tc.Text)
-			}
-		}
-		return strings.Join(texts, "")
-	}
-	return ""
 }
 
 // newChatID is a name for a chat that no other chat of the folder has.

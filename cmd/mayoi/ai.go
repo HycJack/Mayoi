@@ -36,6 +36,10 @@ type aiPanel struct {
 	// msgs are the messages of the conversation, the user's and the
 	// assistant's, in the order they were said.
 	msgs []aiMessage
+	// history is the same conversation as the model takes it: the tools
+	// that ran and what they said are in it, so a chat opened again is
+	// the assistant that read those files.
+	history []piai.Message
 	// prompt is what was typed and not sent yet.
 	prompt string
 	// keyed says what was typed is what this window typed, not what a
@@ -190,12 +194,15 @@ func (a *app) send() {
 	done := make(chan struct{})
 	p.runCancel, p.runDone = cancel, done
 	tools := a.aiTools()
+	// The question is not in the messages: the run adds it, and the run
+	// that follows this one takes it from the history.
+	before := len(p.history)
 	run := ai.Run{
 		Model:    model,
 		APIKey:   key,
 		System:   ai.SystemFor(a.persona(), aiChatSystem, ai.Memory(a.root)),
 		Prompt:   text + "\n\n" + ai.Env(a.root, a.aiOpenPath()),
-		Messages: ai.Transcript(spoken(p.msgs[:last])),
+		Messages: p.history,
 		Tools:    append(tools.Sets(), a.aiOpenTool()),
 	}
 	loop := a.loop
@@ -227,6 +234,16 @@ func (a *app) send() {
 				return
 			}
 			p.runCancel, p.runDone = nil, nil
+			// The question is part of the conversation whether or not
+			// its answer came: what the model read on the way is what
+			// makes the chat the same one when it is opened again.
+			if len(msgs) > before {
+				p.history = msgs
+			} else {
+				// A run that returned nothing of its own said what the
+				// screen says it said.
+				p.history = ai.Said(spoken(p.msgs))
+			}
 			if p.writing != w {
 				return
 			}
@@ -265,7 +282,7 @@ func (a *app) keepChat(model piai.Model, key string) {
 		p.title = aiTitleOf(p.msgs)
 	}
 	sessions := ai.Sessions{Dir: a.settings.SessionsPath()}
-	id, err := sessions.Save(p.chat, p.title, spoken(p.msgs))
+	id, err := sessions.Save(p.chat, p.title, p.history)
 	if err != nil {
 		// The conversation stays in the panel: a chat that cannot be
 		// written is still a chat.
@@ -309,8 +326,11 @@ func (a *app) openChat(id string) {
 	a.refuseApproval()
 	p.msgs = nil
 	for _, m := range chat.Msgs {
-		p.msgs = append(p.msgs, aiMessage{role: m.Role, text: m.Text})
+		p.msgs = append(p.msgs, aiMessage{role: m.Role, text: m.Text, tools: m.Tools})
 	}
+	// The tools the chat called are part of it: asking again here is
+	// asking the assistant that already read those files.
+	p.history = chat.History
 	p.chat, p.title, p.chats, p.outOfSteps, p.err = id, chat.Title, false, false, ""
 	a.invalidate()
 }
@@ -321,6 +341,7 @@ func (a *app) newChat() {
 	p.cancel()
 	a.refuseApproval()
 	p.msgs, p.chat, p.title, p.chats, p.outOfSteps, p.err = nil, "", "", false, false, ""
+	p.history = nil
 	p.keyed.Focus()
 	a.invalidate()
 }
@@ -557,15 +578,11 @@ func (a *app) refuseApproval() {
 	p.approval = nil
 }
 
-// spoken is the messages of the conversation as the models take them: an
-// answer that was stopped before it said anything is left out.
+// spoken is what the panel shows, as the assistant's own type.
 func spoken(msgs []aiMessage) []ai.Message {
 	out := make([]ai.Message, 0, len(msgs))
 	for _, m := range msgs {
-		if m.text == "" {
-			continue
-		}
-		out = append(out, ai.Message{Role: m.role, Text: m.text})
+		out = append(out, ai.Message{Role: m.role, Text: m.text, Tools: m.tools})
 	}
 	return out
 }

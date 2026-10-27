@@ -691,3 +691,76 @@ func TestOneListShowsAtATime(t *testing.T) {
 		t.Errorf("chats open %v, voices open %v", a.ai.chats, a.ai.menu)
 	}
 }
+
+func TestAnOpenedChatRemembersWhatTheToolsDid(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	var sent []ai.Run
+	old, oldTarget := a.loop, a.target
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
+	}
+	// The first run reads a file, and says so with a tool result in the
+	// conversation it returns.
+	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		sent = append(sent, r)
+		if len(sent) > 1 {
+			return nil, nil
+		}
+		onStep(ai.Step{ToolCalls: []string{"read"}})
+		onStep(ai.Step{Message: "It is a main."})
+		return []piai.Message{
+			piai.UserMessage{Role: "user", Content: "what is in main.go"},
+			piai.AssistantMessage{Role: "assistant", Content: []piai.ContentBlock{
+				piai.ToolCall{Type: "tool_use", ID: "c1", Name: "read", Arguments: json.RawMessage(`{"path":"main.go"}`)},
+			}},
+			piai.ToolResultMessage{Role: "toolResult", ToolCallID: "c1", ToolName: "read",
+				Content: []piai.ContentBlock{piai.TextContent{Type: "text", Text: "package main"}}},
+			piai.AssistantMessage{Role: "assistant", Content: []piai.ContentBlock{
+				piai.TextContent{Type: "text", Text: "It is a main."},
+			}},
+		}, nil
+	}
+	t.Cleanup(func() { a.loop, a.target = old, oldTarget })
+
+	toggle := func() {
+		a.toggleAI()
+		hs.settle()
+	}
+	toggle()
+	hs.tt.Type("what is in main.go")
+	hs.settle()
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	hs.settle()
+
+	chats, err := ai.Sessions{Dir: hs.chats}.List()
+	if err != nil || len(chats) != 1 {
+		t.Fatalf("the chats are %+v, %v", chats, err)
+	}
+	// Another conversation, then this one opened again.
+	a.newChat()
+	hs.settle()
+	a.openChat(chats[0].ID)
+	hs.settle()
+	// The question, the answer that read, and what it said after.
+	if len(a.ai.msgs) != 3 || len(a.ai.msgs[1].tools) != 1 || a.ai.msgs[1].tools[0] != "read" {
+		t.Fatalf("the chat shows %+v", a.ai.msgs)
+	}
+	hs.tt.Type("and what does it do")
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	hs.settle()
+
+	if len(sent) != 2 {
+		t.Fatalf("the assistant was asked %d times", len(sent))
+	}
+	// The assistant that reads again is the one that already read it.
+	carried := false
+	for _, m := range sent[1].Messages {
+		if r, ok := m.(piai.ToolResultMessage); ok && r.ToolName == "read" {
+			carried = true
+		}
+	}
+	if !carried {
+		t.Errorf("the question carries %+v", sent[1].Messages)
+	}
+}

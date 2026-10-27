@@ -13,6 +13,7 @@ needs a `## <version>` section here, or its build fails.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
 - Each answer is kept in `ai-sessions/`, named after the first question: the list in the panel's head opens one.
 - **New Chat** in the panel's head starts another conversation, and the old one stays in the list.
+- A chat opened from that list is the same conversation: the assistant still knows what it read and wrote.
 - The assistant can answer as **Coder**, **Architect**, **Code Reviewer**, **Security** or **Designer**, or in its own voice.
 - Your own voices go in `ai.personas`; a `MAYOI.md` in the folder tells the assistant how the project works.
 - `ai.provider` and `ai.model` choose the model; a missing key or an unknown model says which it was.

@@ -409,9 +409,9 @@ account syncs: they live in `ai-keys.json` beside it, one key per provider. The 
 Every answer is kept, with its question, in `ai-sessions/` beside the settings, one file per conversation, named after
 the first question and cut to 40 characters. **New Chat**, in the panel's head, starts another conversation; the list
 beside it opens a past one, newest first, with how long ago it changed. A conversation is written once it has an answer,
-and a chat that cannot be written says so without losing what is on the screen. A chat keeps what was said, not what
-the tools did on the way: a chat opened again is the conversation without its tool calls, so the assistant reading it
-does not see the files it read or the writes it was refused.
+and a chat that cannot be written says so without losing what is on the screen. A chat keeps what was said and what the
+tools did on the way, so a chat opened again is the same assistant: it knows which files it read and which writes it was
+refused, and goes on from there without reading them twice.
 
 The button beside the list chooses whose voice answers: Mayoi's own, or one of the five it comes with — Coder, Architect,
 Code Reviewer, Security, Designer — whose instructions come from terax-clone's `agents.ts`. `ai.personas` in
