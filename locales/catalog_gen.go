@@ -446,6 +446,196 @@ func (msgs Messages) AiNoChats() string {
 	return Catalog.Format(msgs.locale, "aiNoChats", nil)
 }
 
+// AiConfAddVoice says "Add a voice"
+// in the language the app shows.
+func AiConfAddVoice() string { return In(i18n.Locale()).AiConfAddVoice() }
+
+// AiConfAddVoice says "Add a voice"
+// in the language of msgs.
+func (msgs Messages) AiConfAddVoice() string {
+	return Catalog.Format(msgs.locale, "aiConfAddVoice", nil)
+}
+
+// AiConfApprove says "Approve each edit"
+// in the language the app shows.
+func AiConfApprove() string { return In(i18n.Locale()).AiConfApprove() }
+
+// AiConfApprove says "Approve each edit"
+// in the language of msgs.
+func (msgs Messages) AiConfApprove() string {
+	return Catalog.Format(msgs.locale, "aiConfApprove", nil)
+}
+
+// AiConfApproveWhy says "The assistant asks before it writes a file."
+// in the language the app shows.
+func AiConfApproveWhy() string { return In(i18n.Locale()).AiConfApproveWhy() }
+
+// AiConfApproveWhy says "The assistant asks before it writes a file."
+// in the language of msgs.
+func (msgs Messages) AiConfApproveWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfApproveWhy", nil)
+}
+
+// AiConfBash says "Allow commands"
+// in the language the app shows.
+func AiConfBash() string { return In(i18n.Locale()).AiConfBash() }
+
+// AiConfBash says "Allow commands"
+// in the language of msgs.
+func (msgs Messages) AiConfBash() string {
+	return Catalog.Format(msgs.locale, "aiConfBash", nil)
+}
+
+// AiConfBashWhy says "The assistant may run shell commands, each approved first."
+// in the language the app shows.
+func AiConfBashWhy() string { return In(i18n.Locale()).AiConfBashWhy() }
+
+// AiConfBashWhy says "The assistant may run shell commands, each approved first."
+// in the language of msgs.
+func (msgs Messages) AiConfBashWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfBashWhy", nil)
+}
+
+// AiConfExtra says "Extra instructions"
+// in the language the app shows.
+func AiConfExtra() string { return In(i18n.Locale()).AiConfExtra() }
+
+// AiConfExtra says "Extra instructions"
+// in the language of msgs.
+func (msgs Messages) AiConfExtra() string {
+	return Catalog.Format(msgs.locale, "aiConfExtra", nil)
+}
+
+// AiConfExtraWhy says "Added to every prompt, in every voice."
+// in the language the app shows.
+func AiConfExtraWhy() string { return In(i18n.Locale()).AiConfExtraWhy() }
+
+// AiConfExtraWhy says "Added to every prompt, in every voice."
+// in the language of msgs.
+func (msgs Messages) AiConfExtraWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfExtraWhy", nil)
+}
+
+// AiConfKey says "API key"
+// in the language the app shows.
+func AiConfKey() string { return In(i18n.Locale()).AiConfKey() }
+
+// AiConfKey says "API key"
+// in the language of msgs.
+func (msgs Messages) AiConfKey() string {
+	return Catalog.Format(msgs.locale, "aiConfKey", nil)
+}
+
+// AiConfKeyKept says "A key is kept for {provider}."
+// in the language the app shows.
+func AiConfKeyKept(provider string) string { return In(i18n.Locale()).AiConfKeyKept(provider) }
+
+// AiConfKeyKept says "A key is kept for {provider}."
+// in the language of msgs.
+func (msgs Messages) AiConfKeyKept(provider string) string {
+	return Catalog.Format(msgs.locale, "aiConfKeyKept", map[string]any{"provider": provider})
+}
+
+// AiConfKeyPlaceholder says "sk-…"
+// in the language the app shows.
+func AiConfKeyPlaceholder() string { return In(i18n.Locale()).AiConfKeyPlaceholder() }
+
+// AiConfKeyPlaceholder says "sk-…"
+// in the language of msgs.
+func (msgs Messages) AiConfKeyPlaceholder() string {
+	return Catalog.Format(msgs.locale, "aiConfKeyPlaceholder", nil)
+}
+
+// AiConfKeyWhy says "Kept in ai-keys.json, which is not synced to your account."
+// in the language the app shows.
+func AiConfKeyWhy() string { return In(i18n.Locale()).AiConfKeyWhy() }
+
+// AiConfKeyWhy says "Kept in ai-keys.json, which is not synced to your account."
+// in the language of msgs.
+func (msgs Messages) AiConfKeyWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfKeyWhy", nil)
+}
+
+// AiConfModel says "Model"
+// in the language the app shows.
+func AiConfModel() string { return In(i18n.Locale()).AiConfModel() }
+
+// AiConfModel says "Model"
+// in the language of msgs.
+func (msgs Messages) AiConfModel() string {
+	return Catalog.Format(msgs.locale, "aiConfModel", nil)
+}
+
+// AiConfNoProvider says "Choose a provider first."
+// in the language the app shows.
+func AiConfNoProvider() string { return In(i18n.Locale()).AiConfNoProvider() }
+
+// AiConfNoProvider says "Choose a provider first."
+// in the language of msgs.
+func (msgs Messages) AiConfNoProvider() string {
+	return Catalog.Format(msgs.locale, "aiConfNoProvider", nil)
+}
+
+// AiConfProvider says "Provider"
+// in the language the app shows.
+func AiConfProvider() string { return In(i18n.Locale()).AiConfProvider() }
+
+// AiConfProvider says "Provider"
+// in the language of msgs.
+func (msgs Messages) AiConfProvider() string {
+	return Catalog.Format(msgs.locale, "aiConfProvider", nil)
+}
+
+// AiConfRemove says "Remove this voice"
+// in the language the app shows.
+func AiConfRemove() string { return In(i18n.Locale()).AiConfRemove() }
+
+// AiConfRemove says "Remove this voice"
+// in the language of msgs.
+func (msgs Messages) AiConfRemove() string {
+	return Catalog.Format(msgs.locale, "aiConfRemove", nil)
+}
+
+// AiConfTitle says "AI Settings"
+// in the language the app shows.
+func AiConfTitle() string { return In(i18n.Locale()).AiConfTitle() }
+
+// AiConfTitle says "AI Settings"
+// in the language of msgs.
+func (msgs Messages) AiConfTitle() string {
+	return Catalog.Format(msgs.locale, "aiConfTitle", nil)
+}
+
+// AiConfVoiceName says "Name"
+// in the language the app shows.
+func AiConfVoiceName() string { return In(i18n.Locale()).AiConfVoiceName() }
+
+// AiConfVoiceName says "Name"
+// in the language of msgs.
+func (msgs Messages) AiConfVoiceName() string {
+	return Catalog.Format(msgs.locale, "aiConfVoiceName", nil)
+}
+
+// AiConfVoiceWhat says "What it is told"
+// in the language the app shows.
+func AiConfVoiceWhat() string { return In(i18n.Locale()).AiConfVoiceWhat() }
+
+// AiConfVoiceWhat says "What it is told"
+// in the language of msgs.
+func (msgs Messages) AiConfVoiceWhat() string {
+	return Catalog.Format(msgs.locale, "aiConfVoiceWhat", nil)
+}
+
+// AiConfVoices says "Voices you wrote"
+// in the language the app shows.
+func AiConfVoices() string { return In(i18n.Locale()).AiConfVoices() }
+
+// AiConfVoices says "Voices you wrote"
+// in the language of msgs.
+func (msgs Messages) AiConfVoices() string {
+	return Catalog.Format(msgs.locale, "aiConfVoices", nil)
+}
+
 // AiPersonaButton says "Choose the voice"
 // in the language the app shows.
 func AiPersonaButton() string { return In(i18n.Locale()).AiPersonaButton() }

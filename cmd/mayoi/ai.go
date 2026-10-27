@@ -200,7 +200,7 @@ func (a *app) send() {
 	run := ai.Run{
 		Model:    model,
 		APIKey:   key,
-		System:   ai.SystemFor(a.persona(), aiChatSystem, ai.Memory(a.root)),
+		System:   ai.SystemFor(a.persona(), aiChatSystem, a.settings.AI.SystemExtra, ai.Memory(a.root)),
 		Prompt:   text + "\n\n" + ai.Env(a.root, a.aiOpenPath()),
 		Messages: p.history,
 		Tools:    append(tools.Sets(), a.aiOpenTool()),
@@ -680,7 +680,14 @@ func (a *app) aiSidePanel(c *ui.Context) {
 		a.aiTranscript(c)
 		a.aiApprovalCard(c)
 		if a.ai.err != "" {
-			ui.Text(c, a.ai.err).FontSize(12).TextColor(p.dangerText).Padding(0, 10, 6, 10)
+			// A failure is often the settings: the way to them is here,
+			// rather than in a file the user has to find.
+			ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(0, 10, 6, 10).Children(func() {
+				ui.Text(c, a.ai.err).FontSize(12).TextColor(p.dangerText).Grow(1).Shrink(1)
+				if ui.Button(c, locales.AiConfTitle()+"…").FontSize(11).Padding(3, 6).Clicked() {
+					a.post(a.openAISettings)
+				}
+			})
 		}
 		a.aiCompose(c)
 		if !a.panelMax {
@@ -712,6 +719,9 @@ func (a *app) aiTitleRow(c *ui.Context) {
 		}
 		if a.iconButton(c, iconSparkles, locales.AiPersonaButton(), false).Clicked() {
 			a.post(a.togglePersonas)
+		}
+		if a.iconButton(c, iconSettings, locales.AiConfTitle(), false).Clicked() {
+			a.post(a.openAISettings)
 		}
 	})
 }

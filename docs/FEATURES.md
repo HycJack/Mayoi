@@ -442,6 +442,13 @@ Code Reviewer, Security, Designer — whose instructions come from terax-clone's
 every 30 seconds, and cut at 32 KB on a line. What the assistant is told of the folder also names the file on screen, so
 that "this function" means the one being looked at.
 
+**AI Settings**, from the panel's gear, **View → AI Settings** or the palette, sets what the assistant is: the provider
+and its model, the key it asks with, whether a write asks first, whether it may run commands, and what is added to every
+prompt in every voice. The key goes to `ai-keys.json`, which is not synced; the panel says it is kept without showing it.
+The same dialog writes voices of your own — a name and what it is told — beside the built-in five, and a voice named
+after one that comes with Mayoi takes an id of its own, as the setting names the voice by it. A failure in the panel
+offers the settings that may fix it.
+
 The assistant works on the folder through tools: `read` a file with its lines, `glob` for the paths, `grep` for the text,
 `write` and `edit` to change a file, `open_file` to show one in the editor at a line, and `bash` to run a command, which
 is offered only with `ai.allowBash`. A write arrives as a card with the lines it adds and removes: **Approve** writes

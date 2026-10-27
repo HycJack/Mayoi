@@ -221,6 +221,9 @@ type AISettings struct {
 	// AllowBash lets the assistant run commands in the folder, each one
 	// approved first unless ApproveEdits is set.
 	AllowBash bool `json:"allowBash,omitempty"`
+	// SystemExtra is what the user adds to every prompt, whatever voice
+	// answers.
+	SystemExtra string `json:"systemExtra,omitempty"`
 }
 
 // Persona is a voice the user wrote for the assistant: what it is called,

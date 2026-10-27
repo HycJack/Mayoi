@@ -307,6 +307,9 @@ type app struct {
 	ai     aiPanel
 	loop   aiLoop
 	target func() (piai.Model, string, error)
+	// aiConf is the dialog of the assistant's settings: the model, the key
+	// and what it may do in the folder.
+	aiConf aiSettings
 	focus   pane
 	started bool
 	// keys are the shortcuts of keybindings.json, nil for none; chord the

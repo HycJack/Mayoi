@@ -19,6 +19,21 @@ func Providers() []string {
 	return out
 }
 
+// DefaultProvider is the provider a settings dialog starts on: the first a
+// key was given for, or else the first that offers models.
+func DefaultProvider(keys Keys) string {
+	ps := Providers()
+	for _, name := range ps {
+		if keys[name] != "" {
+			return name
+		}
+	}
+	if len(ps) > 0 {
+		return ps[0]
+	}
+	return ""
+}
+
 // Models lists the chat models of a provider.
 func Models(provider string) []piai.Model {
 	return piai.GetModels(piai.KnownProvider(provider))

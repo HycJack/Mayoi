@@ -113,15 +113,27 @@ func PersonaByID(ps []Persona, id string) *Persona {
 	return nil
 }
 
+// BuiltIn is the voices that come with Mayoi, which the user chooses
+// among but does not write.
+func BuiltIn() []Persona {
+	out := make([]Persona, len(builtInPersonas))
+	copy(out, builtInPersonas)
+	return out
+}
+
 // SystemFor is what the assistant is told of itself: the persona's
-// instructions, or the base prompt when there is no persona, then what
-// the folder says of itself.
-func SystemFor(p Persona, base, memory string) string {
+// instructions, or the base prompt when there is no persona, then what the
+// user adds to every prompt, then what the folder says of itself.
+func SystemFor(p Persona, base, extra, memory string) string {
 	var sb strings.Builder
 	if strings.TrimSpace(p.Instructions) == "" {
 		sb.WriteString(base)
 	} else {
 		sb.WriteString(strings.TrimSpace(p.Instructions))
+	}
+	if extra = strings.TrimSpace(extra); extra != "" {
+		sb.WriteString("\n\n# What the user asks of every answer\n\n")
+		sb.WriteString(extra)
 	}
 	if memory != "" {
 		sb.WriteString("\n\n# What this project says of itself (MAYOI.md)\n\n")

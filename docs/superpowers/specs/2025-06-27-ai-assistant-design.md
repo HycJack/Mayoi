@@ -130,3 +130,19 @@ replace github.com/HycJack/pi-ai-go => ../../pi-ai-go
 4. **M4 人格与记忆**：人格切换 + 自定义人格 + MAYOI.md + env 注入
 
 每步完成后跑全量测试 + 补新测试，CHANGELOG 按 AGENTS.md 规则加条目。
+
+## 11. 与本文的差异（实施后的实况）
+
+M1–M4 均已完成并合入，以下为实施中与设计不同、或尚未做的地方：
+
+| 设计 | 实况 |
+|---|---|
+| §2 `AI.SystemExtra` | 已做，且在 **AI Settings** 对话框里可视编辑 |
+| §2 密钥手改 `ai-keys.json` | 保留手改即生效，另加 **AI Settings** 里填 key（写 `0o600`，不进同步） |
+| §3 工具卡片显示参数与可折叠结果 | 只显示工具名；`bash` 显示命令、写操作显示行级 diff —— 结果常常很大，折叠进面板会让消息流难读 |
+| §3 `EventCompaction` 提示“上下文已压缩” | 未做：pi-ai-go 的 `agent` 事件流没有这个事件（`core` 只有 `CompactionCancelledError`），等上游 |
+| §4 快捷键 ⌘. / Ctrl+. | 改用 `Alt+CmdOrCtrl+A`（`⌘.` 在 macOS 上被系统输入法切换占用），另加命令面板与 **View → AI Settings** |
+| §5 首轮后用模型生成会话标题 | 不调模型：直接取首句前 40 字。省一次往返；要改回只需在 `keepChat` 里加一次调用 |
+| §5 会话只存文本 | 已改为存模型视角的完整对话（含工具调用与结果），重开会话即同一个助手 |
+| §6 自定义人格只能改设置 JSON | 已做 **AI Settings** 内的增删改；`ai.personas` 手写仍生效 |
+| §7 无 key 时“点击跳设置” | 面板错误行旁有 **AI Settings…** 按钮（任何失败都显示，不只是无 key） |

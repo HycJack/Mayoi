@@ -41,7 +41,7 @@ func TestAPersonaOfAChatIsItsInstructions(t *testing.T) {
 	if p == nil || p.ID != "reviewer" {
 		t.Fatalf("the reviewer is %+v", p)
 	}
-	sys := SystemFor(*p, "", "")
+	sys := SystemFor(*p, "", "", "")
 	if !strings.Contains(sys, "meticulous code reviewer") {
 		t.Errorf("the system prompt is %q", sys)
 	}
@@ -52,7 +52,7 @@ func TestAPersonaOfAChatIsItsInstructions(t *testing.T) {
 }
 
 func TestAnUnknownPersonaIsTheBasePrompt(t *testing.T) {
-	if got := SystemFor(Persona{}, "the base", ""); got != "the base" {
+	if got := SystemFor(Persona{}, "the base", "", ""); got != "the base" {
 		t.Errorf("the system prompt is %q", got)
 	}
 }

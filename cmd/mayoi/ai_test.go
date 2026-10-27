@@ -764,3 +764,150 @@ func TestAnOpenedChatRemembersWhatTheToolsDid(t *testing.T) {
 		t.Errorf("the question carries %+v", sent[1].Messages)
 	}
 }
+
+// openAIConf opens the assistant's settings as the command does, and
+// settles.
+func (hs *harness) openAIConf() {
+	hs.t.Helper()
+	hs.ownChats()
+	hs.a.openAISettings()
+	hs.settle()
+}
+
+func TestTheSettingsChooseTheModel(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	if !a.aiConf.open {
+		t.Fatal("the settings did not open")
+	}
+	if err := hs.tt.Click("openai"); err != nil {
+		t.Fatalf("the provider is not listed: %v", err)
+	}
+	hs.settle()
+	if a.aiConf.provider != "openai" {
+		t.Fatalf("the provider is %q", a.aiConf.provider)
+	}
+	// The models of the provider are the ones it offers, and the row
+	// clicks are the same list: the model is chosen as the dialog does.
+	if !hs.tt.HasText("gpt-4o") {
+		t.Error("the models are not listed")
+	}
+	a.aiConf.model = "gpt-4o"
+	if err := hs.tt.Click(locales.ButtonSave()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if a.settings.AI.Provider != "openai" || a.settings.AI.Model != "gpt-4o" {
+		t.Errorf("the settings say %q/%q", a.settings.AI.Provider, a.settings.AI.Model)
+	}
+	if a.aiConf.open {
+		t.Error("the settings stayed open")
+	}
+}
+
+func TestTheKeyGoesInItsOwnFile(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	a.aiConf.key = "sk-test-123"
+	a.saveAISettings()
+	hs.settle()
+	keys, err := ai.LoadKeys(a.settings.AIPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keys[a.aiConf.provider] != "sk-test-123" {
+		t.Errorf("the keys are %v", keys)
+	}
+	// The settings the account syncs hold no key.
+	if data, err := os.ReadFile(a.settings.Path()); err == nil && strings.Contains(string(data), "sk-test-123") {
+		t.Error("the key is in the settings, which the account syncs")
+	}
+}
+
+func TestAVoiceIsWrittenInTheSettings(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	if err := hs.tt.Click(locales.AiConfAddVoice()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if len(a.aiConf.voices) != 1 {
+		t.Fatalf("the voices are %+v", a.aiConf.voices)
+	}
+	a.aiConf.voices[0].Name = "Plain Talk"
+	a.aiConf.voices[0].Instructions = "Say it plainly."
+	a.saveAISettings()
+	hs.settle()
+	if len(a.settings.AI.Personas) != 1 {
+		t.Fatalf("the voices saved are %+v", a.settings.AI.Personas)
+	}
+	got := a.settings.AI.Personas[0]
+	if got.ID != "plain-talk" || got.Name != "Plain Talk" || got.Instructions != "Say it plainly." {
+		t.Errorf("the voice is %+v", got)
+	}
+	// And the panel answers in it.
+	a.toggleAI()
+	hs.settle()
+	if err := hs.tt.Click(locales.AiPersonaButton()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if err := hs.tt.Click("Plain Talk"); err != nil {
+		t.Fatalf("the voice is not in the list: %v", err)
+	}
+	hs.settle()
+	if a.persona().Instructions != "Say it plainly." {
+		t.Errorf("the voice answering is %+v", a.persona())
+	}
+}
+
+func TestAVoiceMayNotTakeABuiltInName(t *testing.T) {
+	got := personaID("Coder")
+	if got == "coder" {
+		t.Errorf("the id is %q", got)
+	}
+}
+
+func TestTheExtraInstructionsReachTheModel(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	a.aiConf.extra = "Answer in French."
+	a.saveAISettings()
+	hs.settle()
+	sent := hs.fakeStream([]string{"ok"}, nil)
+	hs.ask("hello")
+	got := *sent
+	if len(got) != 1 || !strings.Contains(got[0].System, "Answer in French.") {
+		t.Errorf("the prompt is %q", got[0].System)
+	}
+}
+
+func TestAFailureOffersItsSettings(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.ownChats()
+	// No key at all: the panel says so and offers the way to give one.
+	a.target = func() (piai.Model, string, error) {
+		return piai.Model{}, "", errors.New("no key")
+	}
+	a.toggleAI()
+	hs.settle()
+	hs.tt.Type("hello")
+	hs.settle()
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	hs.settle()
+	if a.ai.err == "" {
+		t.Fatal("the failure said nothing")
+	}
+	if err := hs.tt.Click(locales.AiConfTitle() + "…"); err != nil {
+		t.Fatalf("the settings are not offered: %v", err)
+	}
+	hs.settle()
+	if !a.aiConf.open {
+		t.Error("the settings did not open")
+	}
+}

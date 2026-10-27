@@ -169,6 +169,7 @@ func (a *app) view(c *ui.Context) {
 	a.themePickerView(c)
 	a.remotePickerView(c)
 	a.conflictsView(c)
+	a.aiSettingsView(c)
 	a.promptView(c)
 	a.confirmView(c)
 	a.signinView(c)

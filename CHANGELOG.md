@@ -17,6 +17,9 @@ needs a `## <version>` section here, or its build fails.
 - The assistant can answer as **Coder**, **Architect**, **Code Reviewer**, **Security** or **Designer**, or in its own voice.
 - Your own voices go in `ai.personas`; a `MAYOI.md` in the folder tells the assistant how the project works.
 - `ai.provider` and `ai.model` choose the model; a missing key or an unknown model says which it was.
+- **AI Settings**, from the panel's gear or the palette, sets the provider, the model, the key and what the assistant may do.
+- **AI Settings** also writes voices of your own, and instructions added to every prompt in every voice.
+- A failure in the panel offers the settings that may fix it.
 - MyGo 0.7.1: Shift-click extends terminal selections, and Powerline's rounded caps fill the line.
 - Mermaid nodes and subgraphs with a light `style` fill keep their labels readable in dark themes.
 
