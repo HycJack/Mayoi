@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"mayoi/internal/ai"
 	"mayoi/internal/bg"
@@ -54,6 +55,16 @@ type aiPanel struct {
 	// shown says the panel has drawn itself once, so a window restored
 	// with it open gives it the keyboard.
 	shown bool
+	// chat is the conversation on disk this panel writes to, "" until
+	// the first answer of a new chat.
+	chat string
+	// title is what the chat is called, on disk and in the list.
+	title string
+	// chats says the list of conversations is open.
+	chats bool
+	// listed is what the folder's conversations were when the list
+	// opened, nil once they are read.
+	listed []ai.Chat
 }
 
 // aiMessage is a message of the conversation: whose it is, "user" or
@@ -207,9 +218,95 @@ func (a *app) send() {
 			if wrote := tools.Wrote(); len(wrote) > 0 {
 				a.diskChanged(wrote, nil)
 			}
+			a.keepChat(model, key)
 		})
 	})
 	a.invalidate()
+}
+
+// keepChat writes the conversation to the folder's chats, and names it
+// after its first question, cut short.
+func (a *app) keepChat(model piai.Model, key string) {
+	p := &a.ai
+	if len(p.msgs) == 0 {
+		return
+	}
+	if p.title == "" {
+		p.title = aiTitleOf(p.msgs)
+	}
+	sessions := ai.Sessions{Dir: a.settings.SessionsPath()}
+	id, err := sessions.Save(p.chat, p.title, spoken(p.msgs))
+	if err != nil {
+		// The conversation stays in the panel: a chat that cannot be
+		// written is still a chat.
+		p.err = a.aiSaid(err)
+		a.invalidate()
+		return
+	}
+	p.chat = id
+	a.invalidate()
+}
+
+// aiTitleOf names a conversation: its first question, cut short.
+func aiTitleOf(msgs []aiMessage) string {
+	for _, m := range msgs {
+		if m.role == "user" && m.text != "" {
+			return cutTitle(m.text)
+		}
+	}
+	return cutTitle("")
+}
+
+// cutTitle is the first 40 characters of s, on one line.
+func cutTitle(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if rs := []rune(s); len(rs) > 40 {
+		return strings.TrimSpace(string(rs[:40])) + "…"
+	}
+	return s
+}
+
+// openChat shows the conversation id in the panel.
+func (a *app) openChat(id string) {
+	p := &a.ai
+	chat, err := ai.Sessions{Dir: a.settings.SessionsPath()}.Load(id)
+	if err != nil {
+		p.err = a.aiSaid(err)
+		a.invalidate()
+		return
+	}
+	p.cancel()
+	p.msgs = nil
+	for _, m := range chat.Msgs {
+		p.msgs = append(p.msgs, aiMessage{role: m.Role, text: m.Text})
+	}
+	p.chat, p.title, p.chats, p.outOfSteps, p.err = id, chat.Title, false, false, ""
+	a.invalidate()
+}
+
+// newChat starts a conversation that is kept once it has an answer.
+func (a *app) newChat() {
+	p := &a.ai
+	p.cancel()
+	p.msgs, p.chat, p.title, p.chats, p.outOfSteps, p.err = nil, "", "", false, false, ""
+	p.keyed.Focus()
+	a.invalidate()
+}
+
+// readChats fills the list of conversations from the folder.
+func (a *app) readChats() {
+	p := &a.ai
+	chats, err := ai.Sessions{Dir: a.settings.SessionsPath()}.List()
+	a.post(func() {
+		if p.listed != nil || !p.chats {
+			return
+		}
+		if err != nil {
+			p.err = a.aiSaid(err)
+		}
+		p.listed = chats
+		a.invalidate()
+	})
 }
 
 // lastSaid is what the last answer of a run said.
@@ -421,9 +518,11 @@ func (a *app) aiSidePanel(c *ui.Context) {
 			})
 		}
 	})
+	a.aiChatListView(c)
 }
 
-// aiTitleRow is the head of the assistant's panel: its name.
+// aiTitleRow is the head of the assistant's panel: its name, the new
+// chat and the list of chats, and Stop while an answer is under way.
 func (a *app) aiTitleRow(c *ui.Context) {
 	p := a.pal
 	ui.Row(c.Key("ai-head")).Height(panelHeadH).Padding(0, 10, 0, 12).Gap(6).AlignItems(ui.Center).
@@ -433,6 +532,89 @@ func (a *app) aiTitleRow(c *ui.Context) {
 		if a.ai.writing != nil && a.iconButton(c, iconStopSquare, locales.AiStop(), false).Clicked() {
 			a.stopAI()
 		}
+		if a.iconButton(c, iconPlus, locales.AiNewChat(), false).Clicked() {
+			a.post(a.newChat)
+		}
+		if a.iconButton(c, iconListTree, locales.AiChats(), false).Clicked() {
+			a.post(a.toggleChats)
+		}
+	})
+}
+
+// toggleChats opens or closes the list of conversations, reading the
+// folder's own when it opens.
+func (a *app) toggleChats() {
+	p := &a.ai
+	p.chats = !p.chats
+	p.listed = nil
+	if !p.chats {
+		a.invalidate()
+		return
+	}
+	a.invalidate()
+	bg.Go(func() {
+		defer recoverCrash()
+		a.readChats()
+	})
+}
+
+// aiChatListView is the list of conversations, over the panel.
+func (a *app) aiChatListView(c *ui.Context) {
+	p := &a.ai
+	if !p.chats {
+		return
+	}
+	pal := a.pal
+	ui.Overlay(c, func() {
+		back := a.dialogBack(c, "ai-chats")
+		back.Children(func() {
+			box := a.floating(c, ui.Column(c).Width(420).MaxWidthPercent(92).Margin(titleBarH+8, 0, 0, 0).Radius(10), true).Clip().
+				Role(ui.RoleDialog).Label(locales.AiChats())
+			box.Children(func() {
+				ui.Row(c).Padding(10, 14).Gap(10).AlignItems(ui.Center).
+					BorderWidth(0, 0, 1, 0).BorderColor(pal.border).Children(func() {
+					ui.Icon(c, iconListTree).FontSize(15).TextColor(pal.muted)
+					ui.Text(c, locales.AiChats()).FontSize(14).FontWeight(600).TextColor(pal.text).Grow(1).SingleLine()
+				})
+				switch {
+				case p.listed == nil:
+					ui.Text(c, locales.AiReading()).FontSize(13).TextColor(pal.muted).Padding(12, 16)
+				case len(p.listed) == 0:
+					ui.Text(c, locales.AiNoChats()).FontSize(13).TextColor(pal.muted).Padding(12, 16)
+				default:
+					ui.Scroll(c.Key("ai-chat-list")).MaxHeight(380).Padding(6).Children(func() {
+						for _, chat := range p.listed {
+							a.aiChatRow(c, chat)
+						}
+					})
+				}
+			})
+			if box.PressedOutside() || back.OverlayShortcut(0, ui.KeyEscape) {
+				a.post(func() {
+					p.chats = false
+					a.invalidate()
+				})
+			}
+		})
+	})
+}
+
+// aiChatRow is one conversation of the list.
+func (a *app) aiChatRow(c *ui.Context, chat ai.Chat) {
+	pal := a.pal
+	row := ui.ButtonBase(c.Key("ai-chat:"+chat.ID)).Padding(5, 10).Gap(10).Radius(6).
+		Justify(ui.Start).AlignItems(ui.Center).Label(chat.Title)
+	if row.Hovered() {
+		row.Background(pal.hover)
+	}
+	if row.Clicked() {
+		a.post(func() { a.openChat(chat.ID) })
+	}
+	row.Transition(hoverFade)
+	row.Children(func() {
+		ui.Icon(c, iconClock).FontSize(14).TextColor(pal.muted)
+		ui.Text(c, chat.Title).FontSize(13).TextColor(pal.text).SingleLine().Grow(1)
+		ui.Text(c, ago(chat.When, time.Now())).FontSize(11).TextColor(pal.faint).SingleLine()
 	})
 }
 

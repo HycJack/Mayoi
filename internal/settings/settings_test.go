@@ -512,3 +512,10 @@ func TestTheAssistantPathIsBesideTheSettings(t *testing.T) {
 		t.Errorf("the keys are at %q, want %q", got, want)
 	}
 }
+
+func TestTheConversationsAreBesideTheSettings(t *testing.T) {
+	s := Load(filepath.Join("where", "settings.json"))
+	if got, want := s.SessionsPath(), filepath.Join("where", "ai-sessions"); got != want {
+		t.Errorf("the chats are at %q, want %q", got, want)
+	}
+}

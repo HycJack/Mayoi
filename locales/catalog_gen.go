@@ -305,6 +305,16 @@ func (msgs Messages) AiApproveTitle() string {
 	return Catalog.Format(msgs.locale, "aiApproveTitle", nil)
 }
 
+// AiChats says "Chats"
+// in the language the app shows.
+func AiChats() string { return In(i18n.Locale()).AiChats() }
+
+// AiChats says "Chats"
+// in the language of msgs.
+func (msgs Messages) AiChats() string {
+	return Catalog.Format(msgs.locale, "aiChats", nil)
+}
+
 // AiChatFailed says "The assistant failed: {error}"
 // in the language the app shows.
 func AiChatFailed(error string) string { return In(i18n.Locale()).AiChatFailed(error) }
@@ -385,6 +395,26 @@ func (msgs Messages) AiNoKeyFor(provider string) string {
 	return Catalog.Format(msgs.locale, "aiNoKeyFor", map[string]any{"provider": provider})
 }
 
+// AiNewChat says "New Chat"
+// in the language the app shows.
+func AiNewChat() string { return In(i18n.Locale()).AiNewChat() }
+
+// AiNewChat says "New Chat"
+// in the language of msgs.
+func (msgs Messages) AiNewChat() string {
+	return Catalog.Format(msgs.locale, "aiNewChat", nil)
+}
+
+// AiNoChats says "No chats yet."
+// in the language the app shows.
+func AiNoChats() string { return In(i18n.Locale()).AiNoChats() }
+
+// AiNoChats says "No chats yet."
+// in the language of msgs.
+func (msgs Messages) AiNoChats() string {
+	return Catalog.Format(msgs.locale, "aiNoChats", nil)
+}
+
 // AiPlaceholder says "Ask the assistant"
 // in the language the app shows.
 func AiPlaceholder() string { return In(i18n.Locale()).AiPlaceholder() }
@@ -393,6 +423,16 @@ func AiPlaceholder() string { return In(i18n.Locale()).AiPlaceholder() }
 // in the language of msgs.
 func (msgs Messages) AiPlaceholder() string {
 	return Catalog.Format(msgs.locale, "aiPlaceholder", nil)
+}
+
+// AiReading says "Reading the chats…"
+// in the language the app shows.
+func AiReading() string { return In(i18n.Locale()).AiReading() }
+
+// AiReading says "Reading the chats…"
+// in the language of msgs.
+func (msgs Messages) AiReading() string {
+	return Catalog.Format(msgs.locale, "aiReading", nil)
 }
 
 // AiReject says "Reject"

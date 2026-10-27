@@ -255,6 +255,7 @@
   "aiApproveRun": "Run",
   "aiApproveRunTitle": "The assistant wants to run",
   "aiApproveTitle": "The assistant wants to change",
+  "aiChats": "Chats",
   "aiChatFailed": "The assistant failed: {error}",
   "aiEmpty": "Ask about the code in this folder.",
   "aiFailed": "Couldn't write the message: {error}",
@@ -268,7 +269,10 @@
     }
   },
   "aiNoKeyFor": "Add an API key for {provider} to ai-keys.json: the settings name it.",
+  "aiNewChat": "New Chat",
+  "aiNoChats": "No chats yet.",
   "aiPlaceholder": "Ask the assistant",
+  "aiReading": "Reading the chats…",
   "aiReject": "Reject",
   "aiStop": "Stop",
   "aiStopped": "Stopped.",

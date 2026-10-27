@@ -12,6 +12,7 @@
   "aiApproveRun": "运行",
   "aiApproveRunTitle": "助手想运行",
   "aiApproveTitle": "助手想改动",
+  "aiChats": "对话",
   "aiChatFailed": "助手出错了：{error}",
   "aiEmpty": "问问这个文件夹里的代码。",
   "aiFailed": "无法撰写信息：{error}",
@@ -25,7 +26,10 @@
     }
   },
   "aiNoKeyFor": "请在 ai-keys.json 里为 {provider} 添加 API key：设置里指定的是它。",
+  "aiNewChat": "新对话",
+  "aiNoChats": "还没有对话。",
   "aiPlaceholder": "问助手",
+  "aiReading": "正在读取对话…",
   "aiReject": "拒绝",
   "aiStop": "停止",
   "aiStopped": "已停止。",

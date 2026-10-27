@@ -12,6 +12,7 @@
   "aiApproveRun": "実行",
   "aiApproveRunTitle": "アシスタントが実行を求めています",
   "aiApproveTitle": "アシスタントが変更を求めています",
+  "aiChats": "チャット",
   "aiChatFailed": "アシスタントが失敗しました：{error}",
   "aiEmpty": "このフォルダーのコードについて聞いてください。",
   "aiFailed": "メッセージを書けませんでした：{error}",
@@ -25,7 +26,10 @@
     }
   },
   "aiNoKeyFor": "ai-keys.json に {provider} の API key を追加してください。設定が指定しています。",
+  "aiNewChat": "新しいチャット",
+  "aiNoChats": "まだチャットはありません。",
   "aiPlaceholder": "アシスタントに聞く",
+  "aiReading": "チャットを読み込んでいます…",
   "aiReject": "断る",
   "aiStop": "停止",
   "aiStopped": "停止しました。",

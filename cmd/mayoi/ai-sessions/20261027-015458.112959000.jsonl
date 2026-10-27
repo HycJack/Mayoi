@@ -1,0 +1,3 @@
+{"description":"why does the parser fail on the second l…","id":"","sessionId":"20261027-015458.112959000","timestamp":"2026-10-27T01:54:58.112959Z","type":"session_info"}
+{"id":"","message":{"role":"user","content":"why does the parser fail on the second line of a file with a very long question","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"user","timestamp":"2026-10-27T01:54:58.112959Z","type":"message"}
+{"id":"","message":{"role":"assistant","content":[{"type":"text","text":"ok"}],"api":"","provider":"","model":"","usage":{"input":0,"output":0,"totalTokens":0,"cost":{"input":0,"output":0,"total":0}},"stopReason":"stop","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"assistant","timestamp":"2026-10-27T01:54:58.112959Z","type":"message"}

@@ -11,6 +11,8 @@ needs a `## <version>` section here, or its build fails.
 - A write comes as a card with the changed lines: **Approve** writes them, **Reject** sends them back.
 - `ai.approveEdits` writes without asking first, and `ai.allowBash` lets the assistant run commands, each approved.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
+- Each answer is kept in `ai-sessions/`, named after the first question: the list in the panel's head opens one.
+- **New Chat** in the panel's head starts another conversation, and the old one stays in the list.
 - `ai.provider` and `ai.model` choose the model; a missing key or an unknown model says which it was.
 
 ## 0.12.0

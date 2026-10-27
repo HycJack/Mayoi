@@ -155,6 +155,9 @@ type harness struct {
 	h    *fakeHost
 	tt   *ui.Tester
 	root string
+	// chats is the folder this test's conversations go in, made on the
+	// first ask.
+	chats string
 	// held counts the background work a test holds on purpose, which
 	// settle does not wait for.
 	held int64

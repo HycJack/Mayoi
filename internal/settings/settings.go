@@ -25,6 +25,9 @@ type Settings struct {
 	State
 	// WrapGen counts the changes of WordWrap.
 	WrapGen int
+	// SessionsDir is where the assistant's conversations go, when they
+	// are not beside the settings: a test keeps its own there.
+	SessionsDir string
 
 	path      string
 	statePath string
@@ -559,6 +562,16 @@ func (s *Settings) Path() string { return s.path }
 // they are secrets, and the account syncs the settings.
 func (s *Settings) AIPath() string {
 	return filepath.Join(filepath.Dir(s.path), "ai-keys.json")
+}
+
+// SessionsPath is where the assistant's conversations are kept, one file
+// each. Unlike settings.json, which the account syncs, they stay on this
+// machine.
+func (s *Settings) SessionsPath() string {
+	if s.SessionsDir != "" {
+		return s.SessionsDir
+	}
+	return filepath.Join(filepath.Dir(s.path), "ai-sessions")
 }
 
 // NewWindow keeps a new window, focused first, and names its frame by

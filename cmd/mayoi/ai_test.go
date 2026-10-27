@@ -19,6 +19,16 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+// ownChats puts this window's chats in a folder of their own, so that a
+// test sees no conversation another test wrote.
+func (hs *harness) ownChats() {
+	if hs.chats != "" {
+		return
+	}
+	hs.chats = filepath.Join(hs.t.TempDir(), "ai-sessions")
+	hs.a.settings.SessionsDir = hs.chats
+}
+
 // fakeStream replaces the assistant's run for a test: it says reply piece
 // by piece, and reports err after them. A nil reply hangs until the
 // context is cancelled, as a model that thinks for long.
@@ -56,9 +66,11 @@ func (hs *harness) fakeStream(reply []string, err error) *[]ai.Run {
 	return asked
 }
 
-// ask types a question into the assistant and presses Enter.
+// ask types a question into the assistant and presses Enter, in a folder
+// whose chats are new to this test.
 func (hs *harness) ask(question string) {
 	hs.t.Helper()
+	hs.ownChats()
 	hs.a.toggleAI()
 	hs.settle()
 	hs.tt.Type(question)
@@ -467,5 +479,95 @@ func TestTheCardShowsTheCommandToRun(t *testing.T) {
 	}
 	for i := 0; i < 20; i++ {
 		step(hs.tt)
+	}
+}
+
+func TestAChatIsKeptAfterItsAnswer(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.fakeStream([]string{"The parser is fine."}, nil)
+	hs.ask("is the parser fine")
+	chats, err := ai.Sessions{Dir: a.settings.SessionsPath()}.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(chats) != 1 {
+		t.Fatalf("the folder has %d chats", len(chats))
+	}
+	if chats[0].Title != "is the parser fine" {
+		t.Errorf("the title is %q", chats[0].Title)
+	}
+	if len(chats[0].Msgs) != 2 || chats[0].Msgs[1].Text != "The parser is fine." {
+		t.Errorf("the chat is %+v", chats[0].Msgs)
+	}
+}
+
+func TestTheTitleIsTheFirstFortyCharacters(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.fakeStream([]string{"ok"}, nil)
+	hs.ask("why does the parser fail on the second line of a file with a very long question")
+	if got := a.ai.title; len([]rune(got)) > 41 || got == "" {
+		t.Errorf("the title is %q", got)
+	}
+	if !strings.HasPrefix(a.ai.title, "why does the parser") {
+		t.Errorf("the title is %q", a.ai.title)
+	}
+}
+
+func TestANewChatStartsEmptyAndKeepsTheOldOne(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.fakeStream([]string{"Sure."}, nil)
+	hs.ask("first question")
+	hs.settle()
+	if err := hs.tt.Click(locales.AiNewChat()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if len(a.ai.msgs) != 0 {
+		t.Fatalf("the new chat has %+v", a.ai.msgs)
+	}
+	chats, err := ai.Sessions{Dir: a.settings.SessionsPath()}.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(chats) != 1 {
+		t.Fatalf("the old chat is gone: %+v", chats)
+	}
+	// Answering again keeps a second chat.
+	hs.tt.Type("second question")
+	hs.settle()
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	hs.settle()
+	chats, err = ai.Sessions{Dir: a.settings.SessionsPath()}.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(chats) != 2 {
+		t.Errorf("the folder has %d chats", len(chats))
+	}
+}
+
+func TestTheListOpensAChat(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.fakeStream([]string{"Sure."}, nil)
+	hs.ask("first question")
+	hs.settle()
+	if err := hs.tt.Click(locales.AiNewChat()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if err := hs.tt.Click(locales.AiChats()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if err := hs.tt.Click("first question"); err != nil {
+		t.Fatalf("the chat is not in the list: %v", err)
+	}
+	hs.settle()
+	if len(a.ai.msgs) != 2 || a.ai.msgs[0].text != "first question" {
+		t.Errorf("the chat that opened is %+v", a.ai.msgs)
 	}
 }
