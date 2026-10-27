@@ -116,6 +116,21 @@ reloading from disk can all be undone. Undoing back to the saved text marks the 
 - A folder in the breadcrumbs, clicked, shows its files in a tree below it, apart from the Explorer's: open its
   folders, and choose a file to show it in that column, with the mouse or the arrows and Enter.
 
+### Language servers
+
+Mayoi starts the language server of a file as it opens, from the servers it knows: `gopls` for Go, `rust-analyzer` for
+Rust, `pyright` and `ruff` for Python, `typescript-language-server` for JavaScript and TypeScript, `clangd` for C and
+C++, and others. A server that is not installed is passed over in silence, and the editor works as it does without one.
+
+- What a server finds wrong waves under the code, in red for an error and amber for a warning, and the status bar
+  counts them. Click a count to go to the next one of its kind.
+- `F12` goes to the definition of the name at the caret, and `Shift+F12` lists where it is used, in the sidebar, as the
+  matches of a search in the files.
+- The editor tells its server what the file says as it is typed, and what it says when it is saved.
+- Servers start for the folder of the project, up to eight at a time, and stop as the window closes.
+- `lsp` in `settings.json` turns them off for good, and **View → Language Servers** toggles them for the session.
+- Remote files are not served.
+
 ### Git
 
 The gutter marks lines added, changed or removed since the last commit. A strip along the right edge shows these

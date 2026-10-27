@@ -24,12 +24,12 @@ import (
 // carries an id, a notification only says, a response carries the id of
 // the request it answers.
 type message struct {
-	JSONRPC string          `json:"jsonrpc"`
+	JSONRPC string           `json:"jsonrpc"`
 	ID      *json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method,omitempty"`
-	Params  json.RawMessage `json:"params,omitempty"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *responseError  `json:"error,omitempty"`
+	Method  string           `json:"method,omitempty"`
+	Params  json.RawMessage  `json:"params,omitempty"`
+	Result  json.RawMessage  `json:"result,omitempty"`
+	Error   *responseError   `json:"error,omitempty"`
 }
 
 // responseError is what a server says instead of a result.
@@ -60,6 +60,9 @@ type wire struct {
 	nextID  int
 	pending map[int]chan message
 	closed  bool
+	// done is closed as the server's messages stop, and made the first
+	// time a request waits for it.
+	done chan struct{}
 	// handler reads what the server says without being asked: the
 	// diagnostics it publishes, and the errors it logs.
 	handler Handler
@@ -182,7 +185,23 @@ func (w *wire) fromServer(m message) {
 		if json.Unmarshal(m.Params, &p) == nil {
 			w.log(p.Type, p.Message)
 		}
-	case "$/progress", "telemetry/event", "window/workDoneProgress/create":
+	case "workspace/configuration":
+		// Mayoi has no settings of a server to give: a null each keeps
+		// the server on what it would do without them.
+		var p struct {
+			Items []json.RawMessage `json:"items"`
+		}
+		if json.Unmarshal(m.Params, &p) != nil || m.ID == nil {
+			return
+		}
+		w.reply(*m.ID, make([]any, len(p.Items)))
+	case "client/registerCapability", "client/unregisterCapability", "window/workDoneProgress/create":
+		// Nothing to say of these, and an answer keeps the server from
+		// waiting for one.
+		if m.ID != nil {
+			w.reply(*m.ID, nil)
+		}
+	case "$/progress", "telemetry/event":
 		// Nothing to say of these.
 	}
 }
@@ -253,7 +272,23 @@ func (w *wire) request(ctx context.Context, method string, params any, out any) 
 		// as the protocol asks, so that it stops working on it.
 		w.cancel(id)
 		return ctx.Err()
+	case <-w.gone():
+		return errClosed
 	}
+}
+
+// gone is closed when the server's messages stop: a request in a context
+// that never ends still ends with the server.
+func (w *wire) gone() <-chan struct{} {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.done == nil {
+		w.done = make(chan struct{})
+		if w.closed {
+			close(w.done)
+		}
+	}
+	return w.done
 }
 
 // cancel says that an answer is no longer wanted, as the protocol asks, so
@@ -296,6 +331,9 @@ func (w *wire) fail(err error) {
 		return
 	}
 	w.closed = true
+	if w.done != nil {
+		close(w.done)
+	}
 	pending := w.pending
 	w.pending = map[int]chan message{}
 	w.mu.Unlock()

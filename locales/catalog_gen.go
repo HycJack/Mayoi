@@ -566,11 +566,11 @@ func (msgs Messages) AiConfFetch() string {
 	return Catalog.Format(msgs.locale, "aiConfFetch", nil)
 }
 
-// AiConfFetched says "{count, plural, one {# model} other {# models}}"
+// AiConfFetched says "{count, plural, one {# model. Type one of your own below} other {# models. Type one of your own below}}"
 // in the language the app shows.
 func AiConfFetched(count int) string { return In(i18n.Locale()).AiConfFetched(count) }
 
-// AiConfFetched says "{count, plural, one {# model} other {# models}}"
+// AiConfFetched says "{count, plural, one {# model. Type one of your own below} other {# models. Type one of your own below}}"
 // in the language of msgs.
 func (msgs Messages) AiConfFetched(count int) string {
 	return Catalog.Format(msgs.locale, "aiConfFetched", map[string]any{"count": count})
@@ -674,6 +674,26 @@ func AiConfMore(count int) string { return In(i18n.Locale()).AiConfMore(count) }
 // in the language of msgs.
 func (msgs Messages) AiConfMore(count int) string {
 	return Catalog.Format(msgs.locale, "aiConfMore", map[string]any{"count": count})
+}
+
+// AiConfModelPlaceholder says "A model's name the endpoint did not list"
+// in the language the app shows.
+func AiConfModelPlaceholder() string { return In(i18n.Locale()).AiConfModelPlaceholder() }
+
+// AiConfModelPlaceholder says "A model's name the endpoint did not list"
+// in the language of msgs.
+func (msgs Messages) AiConfModelPlaceholder() string {
+	return Catalog.Format(msgs.locale, "aiConfModelPlaceholder", nil)
+}
+
+// AiConfModelType says "Type one"
+// in the language the app shows.
+func AiConfModelType() string { return In(i18n.Locale()).AiConfModelType() }
+
+// AiConfModelType says "Type one"
+// in the language of msgs.
+func (msgs Messages) AiConfModelType() string {
+	return Catalog.Format(msgs.locale, "aiConfModelType", nil)
 }
 
 // AiConfNoModel says "Keep a model first."
@@ -2478,6 +2498,16 @@ func (msgs Messages) CmdGoBracket() string {
 	return Catalog.Format(msgs.locale, "cmdGoBracket", nil)
 }
 
+// CmdGoDefinition says "Go to Definition"
+// in the language the app shows.
+func CmdGoDefinition() string { return In(i18n.Locale()).CmdGoDefinition() }
+
+// CmdGoDefinition says "Go to Definition"
+// in the language of msgs.
+func (msgs Messages) CmdGoDefinition() string {
+	return Catalog.Format(msgs.locale, "cmdGoDefinition", nil)
+}
+
 // CmdGoCommands says "Command Palette…"
 // in the language the app shows.
 func CmdGoCommands() string { return In(i18n.Locale()).CmdGoCommands() }
@@ -2546,6 +2576,16 @@ func CmdGoQuickOpen() string { return In(i18n.Locale()).CmdGoQuickOpen() }
 // in the language of msgs.
 func (msgs Messages) CmdGoQuickOpen() string {
 	return Catalog.Format(msgs.locale, "cmdGoQuickOpen", nil)
+}
+
+// CmdGoReferences says "Find All References"
+// in the language the app shows.
+func CmdGoReferences() string { return In(i18n.Locale()).CmdGoReferences() }
+
+// CmdGoReferences says "Find All References"
+// in the language of msgs.
+func (msgs Messages) CmdGoReferences() string {
+	return Catalog.Format(msgs.locale, "cmdGoReferences", nil)
 }
 
 // CmdGoSymbol says "Go to Symbol…"
@@ -2896,6 +2936,16 @@ func CmdViewLockColumn() string { return In(i18n.Locale()).CmdViewLockColumn() }
 // in the language of msgs.
 func (msgs Messages) CmdViewLockColumn() string {
 	return Catalog.Format(msgs.locale, "cmdViewLockColumn", nil)
+}
+
+// CmdViewLSP says "Language Servers"
+// in the language the app shows.
+func CmdViewLSP() string { return In(i18n.Locale()).CmdViewLSP() }
+
+// CmdViewLSP says "Language Servers"
+// in the language of msgs.
+func (msgs Messages) CmdViewLSP() string {
+	return Catalog.Format(msgs.locale, "cmdViewLSP", nil)
 }
 
 // CmdViewMoveTabNext says "Move Tab to Next Column"
@@ -5656,6 +5706,116 @@ func LockedColumn() string { return In(i18n.Locale()).LockedColumn() }
 // in the language of msgs.
 func (msgs Messages) LockedColumn() string {
 	return Catalog.Format(msgs.locale, "lockedColumn", nil)
+}
+
+// LspFailed says "{server} could not start: {error}"
+// in the language the app shows.
+func LspFailed(server string, error string) string { return In(i18n.Locale()).LspFailed(server, error) }
+
+// LspFailed says "{server} could not start: {error}"
+// in the language of msgs.
+func (msgs Messages) LspFailed(server string, error string) string {
+	return Catalog.Format(msgs.locale, "lspFailed", map[string]any{"server": server, "error": error})
+}
+
+// LspErrors says "{n, plural, one {# error} other {# errors}}"
+// in the language the app shows.
+func LspErrors(n int) string { return In(i18n.Locale()).LspErrors(n) }
+
+// LspErrors says "{n, plural, one {# error} other {# errors}}"
+// in the language of msgs.
+func (msgs Messages) LspErrors(n int) string {
+	return Catalog.Format(msgs.locale, "lspErrors", map[string]any{"n": n})
+}
+
+// LspNoDefinition says "No definition found"
+// in the language the app shows.
+func LspNoDefinition() string { return In(i18n.Locale()).LspNoDefinition() }
+
+// LspNoDefinition says "No definition found"
+// in the language of msgs.
+func (msgs Messages) LspNoDefinition() string {
+	return Catalog.Format(msgs.locale, "lspNoDefinition", nil)
+}
+
+// LspNoReferences says "No references found"
+// in the language the app shows.
+func LspNoReferences() string { return In(i18n.Locale()).LspNoReferences() }
+
+// LspNoReferences says "No references found"
+// in the language of msgs.
+func (msgs Messages) LspNoReferences() string {
+	return Catalog.Format(msgs.locale, "lspNoReferences", nil)
+}
+
+// LspNoServer says "No language server serves {language}"
+// in the language the app shows.
+func LspNoServer(language string) string { return In(i18n.Locale()).LspNoServer(language) }
+
+// LspNoServer says "No language server serves {language}"
+// in the language of msgs.
+func (msgs Messages) LspNoServer(language string) string {
+	return Catalog.Format(msgs.locale, "lspNoServer", map[string]any{"language": language})
+}
+
+// LspOff says "Language servers are off"
+// in the language the app shows.
+func LspOff() string { return In(i18n.Locale()).LspOff() }
+
+// LspOff says "Language servers are off"
+// in the language of msgs.
+func (msgs Messages) LspOff() string {
+	return Catalog.Format(msgs.locale, "lspOff", nil)
+}
+
+// LspReferences says "References"
+// in the language the app shows.
+func LspReferences() string { return In(i18n.Locale()).LspReferences() }
+
+// LspReferences says "References"
+// in the language of msgs.
+func (msgs Messages) LspReferences() string {
+	return Catalog.Format(msgs.locale, "lspReferences", nil)
+}
+
+// LspReferencesClose says "Back to search"
+// in the language the app shows.
+func LspReferencesClose() string { return In(i18n.Locale()).LspReferencesClose() }
+
+// LspReferencesClose says "Back to search"
+// in the language of msgs.
+func (msgs Messages) LspReferencesClose() string {
+	return Catalog.Format(msgs.locale, "lspReferencesClose", nil)
+}
+
+// LspReferencesTitle says "{n, plural, one {# reference} other {# references}}"
+// in the language the app shows.
+func LspReferencesTitle(n int) string { return In(i18n.Locale()).LspReferencesTitle(n) }
+
+// LspReferencesTitle says "{n, plural, one {# reference} other {# references}}"
+// in the language of msgs.
+func (msgs Messages) LspReferencesTitle(n int) string {
+	return Catalog.Format(msgs.locale, "lspReferencesTitle", map[string]any{"n": n})
+}
+
+// LspStarting says "{server} is starting"
+// in the language the app shows.
+func LspStarting(server string) string { return In(i18n.Locale()).LspStarting(server) }
+
+// LspStarting says "{server} is starting"
+// in the language of msgs.
+func (msgs Messages) LspStarting(server string) string {
+	return Catalog.Format(msgs.locale, "lspStarting", map[string]any{"server": server})
+}
+
+// LspWarnings says "{n, plural, one {# warning} other {# warnings}}"
+// in the language the app shows.
+func LspWarnings(n int) string { return In(i18n.Locale()).LspWarnings(n) }
+
+// LspWarnings says "{n, plural, one {# warning} other {# warnings}}"
+// in the language of msgs.
+func (msgs Messages) LspWarnings(n int) string {
+	return Catalog.Format(msgs.locale, "lspWarnings", map[string]any{"n": n})
 }
 
 // Menu says "Menu"

@@ -30,9 +30,13 @@ type aiSettings struct {
 	kept bool
 	key  string
 	// listed is what the endpoint said it offers, and filter narrows it:
-	// an endpoint may offer more models than a dialog shows.
+	// an endpoint may offer more models than the list of rows shows, and
+	// one the user knows of need not be listed at all.
 	listed []string
 	filter string
+	// typed is the model the user typed, which Enter or the button beside
+	// it keeps.
+	typed string
 	// fetch says what fetching did, folded into asked when it failed, and
 	// fetching is whether it is asking now.
 	fetch    string
@@ -49,9 +53,38 @@ type aiSettings struct {
 	err string
 }
 
-// aiConfRows is how many models the dialog lists at once: an endpoint can
-// name hundreds, and a dialog that scrolls jumps under the pointer.
+// aiConfRows is how many models the dialog shows at once. The list used to
+// be cut here, which left an endpoint's longer list half seen; it scrolls
+// instead, in a box below the fields, so that the buttons stay in sight.
 const aiConfRows = 8
+
+// aiConfListHeight is how tall the box of models is in a window: about
+// aiConfListRows of them, and never so tall that the buttons below it leave
+// a window of the smallest size.
+func (a *app) aiConfListHeight() float32 {
+	if a.winH == 0 {
+		return 130
+	}
+	return min(max(a.winH*0.18, 60), 200)
+}
+
+// aiConfListRows is the models the box of models shows at once.
+const aiConfListRows = 6
+
+// aiConfW is how wide the dialog is, and aiConfPad how far its content is
+// from its sides: a box that scrolls is given its width, as a box that
+// grows to its parent would be as wide as the longest row.
+const (
+	aiConfW   = 560
+	aiConfPad = 18
+)
+
+// modelRowH is how tall a row of a model is, and voiceRowH a row of a
+// voice: a scroll box is as tall as the rows it shows.
+const (
+	modelRowH = 26
+	voiceRowH = 30
+)
 
 // aiConfProtocol is what a protocol is called where it is chosen.
 func aiConfProtocol(protocol string) string {
@@ -77,6 +110,7 @@ func (a *app) openAISettings() {
 	c.model = a.settings.AI.Model
 	c.models = append([]string(nil), a.settings.AI.Models...)
 	c.listed, c.filter = append([]string(nil), c.models...), ""
+	c.typed = ""
 	// The field says where answers go now, which is the service of the
 	// protocol until another endpoint is named: a port typed after it
 	// makes the other one.
@@ -145,6 +179,21 @@ func (a *app) aiConfUse(model string) {
 	}
 	c.model = model
 	a.invalidate()
+}
+
+// aiConfAdd keeps the model the user typed: an endpoint may offer one it
+// does not list, and a proxy's names are the user's to know.
+func (a *app) aiConfAdd() {
+	c := &a.aiConf
+	model := strings.TrimSpace(c.typed)
+	if model == "" {
+		return
+	}
+	if slicesIndex(c.listed, model) < 0 {
+		c.listed = append(c.listed, model)
+	}
+	a.aiConfUse(model)
+	c.typed = ""
 }
 
 // slicesIndex is where a model sits in what is kept, or -1.
@@ -314,109 +363,21 @@ func (a *app) aiSettingsView(c *ui.Context) {
 	ui.Overlay(c, func() {
 		back := a.dialogBack(c, "ai-settings")
 		back.Children(func() {
-			box := a.floating(c, ui.Column(c).Width(560).MaxWidthPercent(94).MaxHeightPercent(90).
-				Margin(titleBarH+8, 0, 0, 0).Padding(16, 18).Gap(12).Radius(10), true).
+			box := a.floating(c, ui.Column(c).Width(aiConfW).MaxWidthPercent(94).MaxHeightPercent(90).
+				Margin(titleBarH+8, 0, 0, 0).Padding(16, aiConfPad).Gap(10).Radius(10), true).
 				Role(ui.RoleDialog).Label(locales.AiConfTitle())
 			box.Children(func() {
-				ui.Text(c, locales.AiConfTitle()).FontSize(14).FontWeight(600).TextColor(p.text).SingleLine()
-
-				// The endpoint: how it speaks, where it is, and the key.
-				a.aiConfLabel(c, locales.AiConfProtocol())
-				ui.Row(c).Gap(6).Wrap().Children(func() {
-					for _, name := range ai.Protocols() {
-						chosen := name == conf.protocol
-						b := ui.Button(c, aiConfProtocol(name))
-						b.FontSize(11.5).Padding(4, 8)
-						if chosen {
-							b.Background(p.accent).TextColor(p.fillText)
+				// The fields scroll, as the dialog is taller than some
+				// windows: the rows of buttons stay under them, in sight.
+				ui.Scroll(c.Key("ai-conf-body")).Grow(1).MinHeight(0).Children(func() {
+					ui.Column(c).Gap(10).Children(func() {
+						ui.Text(c, locales.AiConfTitle()).FontSize(14).FontWeight(600).TextColor(p.text).SingleLine()
+						a.aiConfFields(c, conf)
+						if conf.err != "" {
+							ui.Text(c, conf.err).FontSize(11.5).TextColor(p.dangerText)
 						}
-						if b.Clicked() && !chosen {
-							protocol := name
-							a.post(func() { a.aiConfPick(protocol) })
-						}
-					}
-				})
-				a.aiConfLabel(c, locales.AiConfBaseURL())
-				base := a.textKeys(ui.TextInputBase(c.Key("ai-conf-base"), &conf.base)).FontSize(12.5).
-					Placeholder(ai.DefaultBaseURL(conf.protocol)).Label(locales.AiConfBaseURL())
-				if base.Submitted() {
-					a.post(a.saveAISettings)
-				}
-				ui.Text(c, locales.AiConfBaseURLWhy()).FontSize(11).TextColor(p.faint).SingleLine()
-
-				// The key: never shown, and never in the settings file.
-				a.aiConfLabel(c, locales.AiConfKey())
-				hint := locales.AiConfKeyWhy()
-				if conf.kept {
-					hint = locales.AiConfKeyKept(ai.DisplayName(conf.protocol))
-				}
-				in := a.textKeys(ui.TextInputBase(c.Key("ai-conf-key"), &conf.key)).FontSize(12.5).
-					Placeholder(locales.AiConfKeyPlaceholder()).Label(locales.AiConfKey())
-				if in.Submitted() {
-					a.post(a.saveAISettings)
-				}
-				ui.Text(c, hint).FontSize(11).TextColor(p.faint).SingleLine()
-
-				// The models: what the endpoint says it offers, and which
-				// of them the assistant may ask for.
-				a.aiConfLabel(c, locales.AiConfModels())
-				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-					fetch := locales.AiConfFetch()
-					if conf.fetching {
-						fetch = locales.AiConfFetching()
-					}
-					b := ui.Button(c, fetch).FontSize(11.5).Padding(4, 8).Disabled(conf.fetching)
-					if b.Clicked() {
-						a.post(a.fetchAIModels)
-					}
-					if conf.fetch != "" {
-						why := p.muted
-						if conf.failed {
-							why = p.dangerText
-						}
-						ui.Text(c, conf.fetch).FontSize(11).TextColor(why).SingleLine().Shrink(1)
-					}
-				})
-				ui.Text(c, locales.AiConfModelsWhy()).FontSize(11).TextColor(p.faint).SingleLine()
-				if len(conf.listed) > aiConfRows {
-					a.textKeys(ui.TextInputBase(c.Key("ai-conf-filter"), &conf.filter)).FontSize(12).
-						Placeholder(locales.AiConfFilter()).Label(locales.AiConfFilter())
-				}
-				shown, more := aiConfShown(conf)
-				for _, model := range shown {
-					a.aiConfModelRow(c, model)
-				}
-				if more > 0 {
-					ui.Text(c, locales.AiConfMore(more)).FontSize(11).TextColor(p.faint).SingleLine()
-				}
-				if len(shown) == 0 {
-					ui.Text(c, locales.AiConfNoModels()).FontSize(11.5).TextColor(p.faint).SingleLine()
-				}
-
-				a.aiConfCheck(c, &conf.approve, locales.AiConfApprove(), locales.AiConfApproveWhy())
-				a.aiConfCheck(c, &conf.bash, locales.AiConfBash(), locales.AiConfBashWhy())
-
-				a.aiConfLabel(c, locales.AiConfExtra())
-				ui.TextArea(c.Key("ai-conf-extra"), &conf.extra).FontSize(12).Height(56).
-					Background(p.editor).Padding(6, 8).Radius(6)
-				ui.Text(c, locales.AiConfExtraWhy()).FontSize(11).TextColor(p.faint).SingleLine()
-
-				// The voices the user wrote, each a name and what it is
-				// told, and the built-in five are not edited: they come
-				// with Mayoi.
-				a.aiConfLabel(c, locales.AiConfVoices())
-				for i := range conf.voices {
-					a.aiConfVoiceRow(c, i)
-				}
-				if ui.Button(c, locales.AiConfAddVoice()).FontSize(11.5).Padding(4, 8).Clicked() {
-					a.post(func() {
-						conf.voices = append(conf.voices, settings.Persona{})
 					})
-				}
-
-				if conf.err != "" {
-					ui.Text(c, conf.err).FontSize(11.5).TextColor(p.dangerText)
-				}
+				})
 				ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 					if ui.Button(c, locales.ButtonCancel()).Clicked() {
 						a.post(func() {
@@ -435,6 +396,165 @@ func (a *app) aiSettingsView(c *ui.Context) {
 			}
 		})
 	})
+}
+
+// aiConfFields is what the dialog shows of the assistant's settings: the
+// endpoint, the models, what the assistant may do, and the voices.
+func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
+	p := a.pal
+	// The endpoint: how it speaks, where it is, and the key.
+	a.aiConfLabel(c, locales.AiConfProtocol())
+	ui.Row(c).Gap(6).Wrap().Children(func() {
+		for _, name := range ai.Protocols() {
+			chosen := name == conf.protocol
+			b := ui.Button(c, aiConfProtocol(name))
+			b.FontSize(11.5).Padding(4, 8)
+			if chosen {
+				b.Background(p.accent).TextColor(p.fillText)
+			}
+			if b.Clicked() && !chosen {
+				protocol := name
+				a.post(func() { a.aiConfPick(protocol) })
+			}
+		}
+	})
+	a.aiConfLabel(c, locales.AiConfBaseURL())
+	base := a.textKeys(ui.TextInputBase(c.Key("ai-conf-base"), &conf.base)).FontSize(12.5).
+		Placeholder(ai.DefaultBaseURL(conf.protocol)).Label(locales.AiConfBaseURL())
+	if base.Submitted() {
+		a.post(a.saveAISettings)
+	}
+	ui.Text(c, locales.AiConfBaseURLWhy()).FontSize(11).TextColor(p.faint).SingleLine()
+
+	// The key: never shown, and never in the settings file.
+	a.aiConfLabel(c, locales.AiConfKey())
+	hint := locales.AiConfKeyWhy()
+	if conf.kept {
+		hint = locales.AiConfKeyKept(ai.DisplayName(conf.protocol))
+	}
+	in := a.textKeys(ui.TextInputBase(c.Key("ai-conf-key"), &conf.key)).FontSize(12.5).
+		Placeholder(locales.AiConfKeyPlaceholder()).Label(locales.AiConfKey())
+	if in.Submitted() {
+		a.post(a.saveAISettings)
+	}
+	ui.Text(c, hint).FontSize(11).TextColor(p.faint).SingleLine()
+
+	// The models: what the endpoint says it offers, and which
+	// of them the assistant may ask for.
+	a.aiConfLabel(c, locales.AiConfModels())
+	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+		fetch := locales.AiConfFetch()
+		if conf.fetching {
+			fetch = locales.AiConfFetching()
+		}
+		b := ui.Button(c, fetch).FontSize(11.5).Padding(4, 8).Disabled(conf.fetching)
+		if b.Clicked() {
+			a.post(a.fetchAIModels)
+		}
+		if conf.fetch != "" {
+			why := p.muted
+			if conf.failed {
+				why = p.dangerText
+			}
+			ui.Text(c, conf.fetch).FontSize(11).TextColor(why).SingleLine().Shrink(1)
+		}
+	})
+	ui.Text(c, locales.AiConfModelsWhy()).FontSize(11).TextColor(p.faint).SingleLine()
+	if len(conf.listed) > aiConfRows {
+		a.textKeys(ui.TextInputBase(c.Key("ai-conf-filter"), &conf.filter)).FontSize(12).
+			Placeholder(locales.AiConfFilter()).Label(locales.AiConfFilter())
+	}
+	// The rows scroll in a box of their own, so that a list
+	// of hundreds does not push the buttons out of the window.
+	shown, more := aiConfShown(conf)
+	if len(shown) > 0 {
+		rows := func() {
+			for _, model := range shown {
+				a.aiConfModelRow(c, model)
+			}
+		}
+		if len(shown) == 1 {
+			// A lone row is laid out at the width of the column it is
+			// in: in a column of one row, that is the dialog's.
+			ui.Row(c).Children(rows)
+		} else {
+			ui.Row(c).Children(func() {
+				// The box is a share of the window, not of the dialog: the
+				// dialog is as tall as what it holds, and a list of
+				// hundreds would take the buttons out of the window.
+				ui.Scroll(c.Key("ai-conf-list")).Height(a.aiConfListHeight()).
+					Background(p.editor).Radius(6).Padding(2).Children(func() {
+					ui.Column(c).Key(c.Key("ai-conf-rows")).Gap(1).Children(rows)
+				})
+			})
+		}
+	}
+	if more > 0 {
+		ui.Text(c, locales.AiConfMore(more)).FontSize(11).TextColor(p.faint).SingleLine()
+	}
+	if len(shown) == 0 {
+		ui.Text(c, locales.AiConfNoModels()).FontSize(11.5).TextColor(p.faint).SingleLine()
+	}
+	// And a name of the user's own, for a model the endpoint did not think
+	// to list: Enter keeps it, and so does the button, which also takes
+	// the keyboard to the field when there is nothing in it to keep.
+	ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+		field := a.textKeys(ui.TextInputBase(c.Key("ai-conf-model"), &conf.typed)).FontSize(12).
+			Placeholder(locales.AiConfModelPlaceholder()).Label(locales.AiConfModelType()).Grow(1).MinWidth(0)
+		if field.Submitted() {
+			a.post(a.aiConfAdd)
+		}
+		if strings.TrimSpace(conf.typed) == "" {
+			// The field came back with a space where Enter cleared it:
+			// nothing typed is nothing to keep.
+			conf.typed = ""
+		}
+		b := ui.Button(c, locales.AiConfModelType()).FontSize(11.5).Padding(4, 8).Shrink(0)
+		if b.Clicked() {
+			// A press with something in the field keeps it; with nothing
+			// there, it takes the keyboard to the field to type one. The
+			// field comes after the button in the frame, so it says the
+			// text of the frame before.
+			if strings.TrimSpace(conf.typed) == "" {
+				field.Focus()
+			} else {
+				a.post(a.aiConfAdd)
+			}
+		}
+	})
+
+	a.aiConfCheck(c, &conf.approve, locales.AiConfApprove(), locales.AiConfApproveWhy())
+	a.aiConfCheck(c, &conf.bash, locales.AiConfBash(), locales.AiConfBashWhy())
+
+	a.aiConfLabel(c, locales.AiConfExtra())
+	ui.TextArea(c.Key("ai-conf-extra"), &conf.extra).FontSize(12).Height(36).
+		Background(p.editor).Padding(6, 8).Radius(6)
+	ui.Text(c, locales.AiConfExtraWhy()).FontSize(11).TextColor(p.faint).SingleLine()
+
+	// The voices the user wrote, each a name and what it is
+	// told, and the built-in five are not edited: they come
+	// with Mayoi.
+	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, locales.AiConfVoices()).FontSize(12.5).TextColor(p.text).SingleLine()
+		if ui.Button(c, locales.AiConfAddVoice()).FontSize(11.5).Padding(4, 8).Clicked() {
+			a.post(func() {
+				conf.voices = append(conf.voices, settings.Persona{})
+			})
+		}
+	})
+	if len(conf.voices) > 0 {
+		// Each voice is a row of what the next one's build
+		// cannot be measured from: a column of them is as
+		// tall as what it had measured, and settles on the
+		// frame after, which is a dialog twice as tall.
+		ui.Row(c).AlignItems(ui.Start).Children(func() {
+			ui.Column(c).Gap(4).Children(func() {
+				for i := range conf.voices {
+					a.aiConfVoiceRow(c, i)
+				}
+			})
+		})
+	}
 }
 
 // aiConfModelRow is one model the endpoint offers: the way to keep it or

@@ -70,6 +70,10 @@ type palette struct {
 	added                 ui.Color // lines changed since Git's last commit
 	changed               ui.Color
 	removed               ui.Color
+	// diagError and diagWarning are what a language server says is wrong
+	// with the text, under it, and the colors the status bar counts
+	// them in.
+	diagError, diagWarning ui.Color
 	// modifiedFg, addedFg, removedFg and dangerFg are those colors as
 	// text: the same hues, darker on a light window or lighter on a dark
 	// one, as far as they need to read at 4.5:1 on the chrome and the
@@ -849,6 +853,9 @@ func (p *palette) derive() *palette {
 	p.selected = p.selection.Over(p.editor)
 	p.selectedDim = p.selection.Alpha(0.5).Over(p.editor)
 	p.cursor = p.accent.Alpha(0.5)
+	// A theme names neither: they are the colors of a language server's
+	// errors and warnings, which are Git's removed and modified lines'.
+	p.diagError, p.diagWarning = p.removed, p.modified
 	return p
 }
 

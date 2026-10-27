@@ -122,6 +122,9 @@ type editor struct {
 	selShape selectionShape
 	stuck    stickyCache
 	overview overview
+	// lsp are what a language server says of the text: its diagnostics,
+	// where they are here.
+	lsp lspMarks
 
 	vscroll ui.ScrollState // the text area's
 	hscroll ui.ScrollState // the container that scrolls it sideways

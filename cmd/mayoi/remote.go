@@ -640,6 +640,7 @@ func (a *app) shutdown() {
 	a.refuseApproval()
 	a.detachRemote()
 	a.closeRemotePicker()
+	a.lspShutdown()
 }
 
 // saveConflict asks what to do with a remote document whose file changed

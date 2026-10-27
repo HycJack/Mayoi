@@ -165,6 +165,13 @@ type Prefs struct {
 	Blame bool `json:"blame"`
 	// Vim edits with vim's keys: the editors start in normal mode.
 	Vim bool `json:"vim,omitempty"`
+	// LSP starts the language server of a file's kind as it opens, which
+	// says what is wrong with the file, and where its names are defined.
+	// A server that is not installed is left out, quietly.
+	LSP bool `json:"lsp"`
+	// LspDiagnostics is the least bad diagnostic the editor marks:
+	// "error", "warning", "info", or "" for all of them, hints included.
+	LspDiagnostics string `json:"lspDiagnostics,omitempty"`
 	// VimCtrlKeys has vim's normal mode take ⌃F, ⌃B and ⌃R on Windows and
 	// Linux, rather than Find, Toggle Sidebar and Open Recent.
 	VimCtrlKeys bool `json:"vimCtrlKeys,omitempty"`
@@ -452,7 +459,7 @@ func Default() *Settings {
 		Prefs: Prefs{
 			FontSize: 13, FontFamily: "monospace", FontWeight: 400, LineHeight: 1.55,
 			AutoSave: true, Blame: true, TerminalCopyOnSelect: true, PreviewMermaid: true, PreviewMath: true,
-			DiffAlignedRows: true, DiffContext: 3, DiffSyncScroll: true, MergeAutoApply: true,
+			DiffAlignedRows: true, DiffContext: 3, DiffSyncScroll: true, MergeAutoApply: true, LSP: true,
 		},
 	}
 }

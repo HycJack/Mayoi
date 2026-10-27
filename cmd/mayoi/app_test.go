@@ -169,6 +169,10 @@ func newHarness(t testing.TB, dark bool) *harness {
 	// A test's chats go in its own folder: the suite must not write into
 	// the tree, nor read what another test wrote.
 	s.SessionsDir = filepath.Join(t.TempDir(), "ai-sessions")
+	// No test starts the language servers of the machine it runs on, which
+	// would make a test of the editor a test of them: the tests of the
+	// servers start one of their own.
+	s.LSP = false
 	w := s.NewWindow()
 	w.Folder = root
 	h := &fakeHost{folder: root}

@@ -40,9 +40,9 @@ type Server struct {
 // tailBuffer keeps the last of what a program wrote, which is what a
 // failed start is explained by.
 type tailBuffer struct {
-	mu   sync.Mutex
-	buf  []byte
-	max  int
+	mu  sync.Mutex
+	buf []byte
+	max int
 }
 
 func newTail(max int) *tailBuffer { return &tailBuffer{max: max} }
@@ -132,11 +132,11 @@ func envWith(extra map[string]string) []string {
 // this server serves, and the options this server wants.
 func (s *Server) initialize(ctx context.Context, options any) error {
 	params := InitializeParams{
-		ProcessID:   os.Getpid(),
-		ClientInfo:  &ClientInfo{Name: "Mayoi"},
-		RootURI:     URI(s.Root),
-		RootPath:    s.Root,
-		WorkspaceFolders: []WorkspaceFolder{{URI: URI(s.Root), Name: filepath.Base(s.Root)}},
+		ProcessID:             os.Getpid(),
+		ClientInfo:            &ClientInfo{Name: "Mayoi"},
+		RootURI:               URI(s.Root),
+		RootPath:              s.Root,
+		WorkspaceFolders:      []WorkspaceFolder{{URI: URI(s.Root), Name: filepath.Base(s.Root)}},
 		InitializationOptions: options,
 	}
 	params.Capabilities.Workspace.WorkspaceFolders = true
@@ -169,6 +169,15 @@ func firstLine(s string) string {
 		return s[:i]
 	}
 	return s
+}
+
+// Opened reports whether the server was told of a document, and not told
+// it closed.
+func (s *Server) Opened(uri string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.opened[uri]
+	return ok
 }
 
 // DidOpen tells the server that a document is shown, with its text.
@@ -230,6 +239,15 @@ func (s *Server) DidClose(uri string) error {
 	delete(s.opened, uri)
 	s.mu.Unlock()
 	return s.w.notify("textDocument/didClose", didCloseParams{TextDocument: TextDocumentIdentifier{URI: uri}})
+}
+
+// Request asks the server something, and reads the answer into out, which
+// nil leaves unread. It is the way to a request Mayoi has no type for.
+func (s *Server) Request(ctx context.Context, method string, params, out any) error {
+	if err := s.w.request(ctx, method, params, out); err != nil {
+		return s.explain(err)
+	}
+	return nil
 }
 
 // Definition is where the name at pos is defined: the places of it, which

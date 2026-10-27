@@ -28,6 +28,7 @@ var otherAccels = map[string]string{
 	"edit.replace":          "Ctrl+H",
 	"file.saveAll":          "",
 	"file.openFolderWindow": "",
+	"view.ai":               "Ctrl+Shift+A",
 	"view.nextColumn":       "",
 	"view.prevColumn":       "",
 }

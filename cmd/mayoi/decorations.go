@@ -8,6 +8,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"mayoi/internal/linediff"
+	"mayoi/internal/lsp"
 )
 
 // decorations are what the editor paints around the text of the lines in
@@ -32,6 +33,66 @@ type runeRect struct {
 	line   int
 	x0, x1 float32
 }
+
+// diagMark is a diagnostic of the text, as where it is: the run on its line
+// it marks, and how bad it is.
+type diagMark struct {
+	runeRect
+	severity int
+}
+
+// diagMarks returns where the diagnostics of a document are among the lines
+// first up to last: under each of them, the run it is of, a rune wide at the
+// start of its line when it is of nothing on it. It keeps the marks of the
+// frame before while the text, the lines and the diagnostics are the same.
+func (d *editor) diagMarks(a *app, snap ui.TextSnapshot, first, last int) []diagMark {
+	diags := a.lspDiagnostics(d.document)
+	lm := &d.lsp
+	if lm.version == snap.Version() && lm.first == first && lm.last == last && lm.count == len(lm.diags) && lm.same(diags) {
+		return lm.marks
+	}
+	lm.version, lm.first, lm.last, lm.count = snap.Version(), first, last, len(diags)
+	lm.diags = diags
+	lm.marks = lm.marks[:0]
+	for _, dg := range diags {
+		line := dg.Range.Start.Line
+		if line < first || line > last || line >= snap.LineCount() {
+			continue
+		}
+		start, end := snap.LineRange(line)
+		from, ok := lspOffset(snap, lsp.Position{Line: line, Character: dg.Range.Start.Character})
+		if !ok {
+			continue
+		}
+		to, ok := lspOffset(snap, lsp.Position{Line: line, Character: dg.Range.End.Character})
+		if !ok || to < from {
+			to = from
+		}
+		if to == from {
+			// A diagnostic of nothing on its line marks its start, or
+			// the last rune of the line when it says nothing of it.
+			if from < end {
+				_, size := utf8.DecodeRuneInString(snap.Slice(from, end))
+				to = from + size
+			} else if end > start {
+				runes := []rune(snap.Slice(start, end))
+				from, to = end-len(string(runes[len(runes)-1])), end
+			}
+		}
+		lm.marks = append(lm.marks, diagMark{
+			runeRect: runeRect{line: line, x0: a.textWidth(snap.Slice(start, from)), x1: a.textWidth(snap.Slice(start, to))},
+			severity: lspSeverity(dg),
+		})
+		if len(lm.marks) >= maxDiagMarks {
+			break
+		}
+	}
+	return lm.marks
+}
+
+// maxDiagMarks is how many diagnostics the editor marks in a frame: a file
+// that a server finds a thousand things wrong with shows the first.
+const maxDiagMarks = 500
 
 // maxScan is how far the editor looks for a bracket's pair, and for the
 // lines around a blank one or the caret's block.

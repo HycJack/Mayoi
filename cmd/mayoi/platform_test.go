@@ -22,6 +22,11 @@ import (
 // The language is worked out once: with no app running, MyGo would match
 // it again for every message, which the frame benchmarks would measure.
 func TestMain(m *testing.M) {
+	if os.Getenv("MAYOI_FAKE_LSP") != "" {
+		// A language server of the tests, which this binary is run as.
+		lspFakeServer()
+		os.Exit(0)
+	}
 	hostOS = "darwin"
 	keepLineEndings()
 	if os.Getenv("MYGO_LOCALE") == "" {

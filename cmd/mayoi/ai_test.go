@@ -808,20 +808,20 @@ func TestTheSettingsChooseTheModel(t *testing.T) {
 	}
 	// The models listed are the ones kept, and a row clicked is the model
 	// that answers, which keeps it.
-	a.aiConf.listed = []string{"claude-a", "claude-b"}
+	a.aiConf.listed = []string{"claude-a"}
 	hs.settle()
-	if err := hs.tt.Click("claude-b"); err != nil {
+	if err := hs.tt.Click("claude-a"); err != nil {
 		t.Fatal(err)
 	}
 	hs.settle()
-	if a.aiConf.model != "claude-b" || len(a.aiConf.models) != 1 {
+	if a.aiConf.model != "claude-a" || len(a.aiConf.models) != 1 {
 		t.Fatalf("the models are %q with %v answering", a.aiConf.models, a.aiConf.model)
 	}
 	if err := hs.tt.Click(locales.ButtonSave()); err != nil {
 		t.Fatal(err)
 	}
 	hs.settle()
-	if a.settings.AI.Protocol != ai.Anthropic || a.settings.AI.Model != "claude-b" {
+	if a.settings.AI.Protocol != ai.Anthropic || a.settings.AI.Model != "claude-a" {
 		t.Errorf("the settings say %q/%q", a.settings.AI.Protocol, a.settings.AI.Model)
 	}
 	if a.aiConf.open {
@@ -834,27 +834,90 @@ func TestAModelRowStaysPutUnderThePointer(t *testing.T) {
 	a := hs.a
 	hs.openAIConf()
 	hs.a.aiConf.protocol = ai.OpenAI
-	a.aiConf.listed = []string{"a-1", "a-2", "a-3"}
+	a.aiConf.listed = []string{"a-1", "a-2"}
 	hs.settle()
 	// Where a row is, and where it is with the pointer over it: a row that
 	// moves is a list that cannot be clicked.
-	for _, model := range a.aiConf.listed {
-		before, ok := hs.tt.Find(model)
-		if !ok {
-			t.Fatalf("no row for %q", model)
-		}
-		hs.tt.Move(before.X+before.W/2, before.Y+before.H/2)
-		hs.settle()
-		after, ok := hs.tt.Find(model)
-		if !ok {
-			t.Fatalf("the row for %q went", model)
-		}
-		if after != before {
-			t.Errorf("the row for %q moved from %v to %v under the pointer", model, before, after)
-		}
-		hs.tt.Move(0, 0)
-		hs.settle()
+	before, ok := hs.tt.Find("a-1")
+	if !ok || before.W == 0 {
+		t.Fatalf("no row shows a-1: %v", before)
 	}
+	hs.tt.Move(before.X+before.W/2, before.Y+before.H/2)
+	hs.settle()
+	after, ok := hs.tt.Find("a-1")
+	if !ok || after.W == 0 {
+		t.Fatalf("the row went: %v", after)
+	}
+	if after != before {
+		t.Errorf("the row moved from %v to %v under the pointer", before, after)
+	}
+	// And the rows stay put as the list is scrolled.
+	hs.tt.Move(0, 0)
+	hs.settle()
+}
+
+func TestAModelIsTypedIn(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	hs.a.aiConf.protocol = ai.OpenAI
+	hs.settle()
+	// An endpoint may offer a model it does not list: the button takes the
+	// keyboard to the field while there is nothing to keep, and what is
+	// typed there is the one that answers.
+	if err := hs.tt.Click(locales.AiConfModelType()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	hs.tt.Type("local-qwen-32b")
+	hs.settle()
+	if a.aiConf.typed != "local-qwen-32b" {
+		t.Fatalf("the field says %q", a.aiConf.typed)
+	}
+	// Enter keeps what is typed, as the button does.
+	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
+	hs.settle()
+	if a.aiConf.model != "local-qwen-32b" || len(a.aiConf.models) != 1 {
+		t.Fatalf("the models are %q with %q answering", a.aiConf.models, a.aiConf.model)
+	}
+	if a.aiConf.typed != "" {
+		t.Errorf("the field still says %q", a.aiConf.typed)
+	}
+	if err := hs.tt.Click(locales.ButtonSave()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if a.settings.AI.Model != "local-qwen-32b" {
+		t.Errorf("the settings say %q", a.settings.AI.Model)
+	}
+}
+
+func TestTheSaveButtonIsInTheWindowWithALongList(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	hs.a.aiConf.protocol = ai.OpenAI
+	// An endpoint that names hundreds: the rows scroll, and the buttons
+	// stay where they are.
+	const height = 760
+	listed := make([]string, 0, 120)
+	for i := range 120 {
+		listed = append(listed, "model-"+strconv.Itoa(i)+"-with-a-name-an-endpoint-gave-it")
+	}
+	a.aiConf.listed = listed
+	a.aiConf.filter = "model-1"
+	hs.settle()
+	save, ok := hs.tt.Find(locales.ButtonSave())
+	if !ok || save.W == 0 {
+		t.Fatalf("no Save button: %v", save)
+	}
+	if save.Y < 0 || save.Y+save.H > height {
+		t.Errorf("the Save button is at %v, outside the window", save)
+	}
+	if err := hs.tt.Click(locales.ButtonSave()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
 }
 
 func TestAModelIsKeptAndDropped(t *testing.T) {

@@ -50,6 +50,8 @@ func (a *app) view(c *ui.Context) {
 	}
 	a.drain()
 	a.pumpChain()
+	a.observeLSP()
+	a.placeJump()
 	// The key the keymap took is let go of where its release does not
 	// come: in a place with no text, or another window.
 	if a.held != nil && (a.blurred || a.keyFocus != placeEditor && a.keyFocus != placeInput) {
@@ -98,7 +100,11 @@ func (a *app) view(c *ui.Context) {
 		a.focus = paneFiles
 	}
 
-	ui.Column(c).Fill().Background(p.chrome).Children(func() {
+	ui.Column(c).Fill().Background(p.chrome).Draw(func(pt *ui.Painter, r ui.Rect) {
+		// How tall the window is, which a dialog that scrolls a list of
+		// models keeps its buttons in.
+		a.winH = r.H
+	}).Children(func() {
 		a.titleBar(c)
 		// The panes keep their places in the tree, by keys, as the sidebar
 		// and the panel come and go, so that the editors keep their state.
@@ -1243,6 +1249,9 @@ func (a *app) statusBar(c *ui.Context) {
 			a.vimBadge(c, &d.vim, text)
 		}
 		item("pos", pos, a.withKey(locales.GoToLineLabel(), "go.line"), nil, func() { a.openQuick(":") })
+		// What the server of the file says of the caret's line, where the
+		// bar has the room: a wave under the text says where, not what.
+		a.lspStatus(d, item)
 		if visible.lines {
 			item("lines", locales.LinesCount(snap.LineCount()), "", nil, nil)
 		}

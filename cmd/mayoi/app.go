@@ -298,9 +298,9 @@ type app struct {
 	errors []string // to show as toasts
 	// fails counts the errors shown, which stop the commands of
 	// runCommands.
-	fails   int
-	notes   []note // what went well, to show as toasts
-	title   string
+	fails int
+	notes []note // what went well, to show as toasts
+	title string
 	// ai is the assistant's panel, at the right of the window, and loop
 	// how it runs a message: ai.Loop, unless a test has its own. target
 	// is the model it asks, and its key.
@@ -310,6 +310,15 @@ type app struct {
 	// aiConf is the dialog of the assistant's settings: the model, the key
 	// and what it may do in the folder.
 	aiConf aiSettings
+	// lsp are the language servers: the programs a file's kind is served
+	// by, and the servers running, with the diagnostics they publish.
+	lsp lspState
+	// pendingLSP is where the caret goes in a file a server named, which
+	// opens in a frame of its own.
+	pendingLSP *lspJumpTo
+	// winH is how tall the window is, which a dialog that scrolls a list of
+	// models keeps its buttons in.
+	winH    float32
 	focus   pane
 	started bool
 	// keys are the shortcuts of keybindings.json, nil for none; chord the
@@ -403,7 +412,8 @@ func (a *app) invalidate() {
 	sv.Invalidate()
 }
 
-// drain runs the functions posted since the last frame.
+// drain runs the functions posted since the last frame, and draws again
+// when the language servers said something new.
 func (a *app) drain() {
 	for {
 		a.mu.Lock()
@@ -411,12 +421,13 @@ func (a *app) drain() {
 		a.queue = nil
 		a.mu.Unlock()
 		if len(q) == 0 {
-			return
+			break
 		}
 		for _, fn := range q {
 			fn()
 		}
 	}
+	a.lspChanged()
 }
 
 func (a *app) fail(format string, args ...any) {
@@ -566,6 +577,7 @@ func (a *app) saveDoc(d *document, then func()) {
 		a.fail("%s", locales.FailSave(d.name(), err.Error()))
 		return
 	}
+	a.lspSaved(d)
 	saved()
 }
 

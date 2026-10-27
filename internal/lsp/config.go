@@ -59,12 +59,12 @@ var presets = []Preset{
 		// 3 GB resident, this one at about 1 GB, trading analysis inside
 		// proc macros and cargo-check diagnostics.
 		Options: map[string]any{
-			"cachePriming":  map[string]any{"enable": false},
-			"lru":           map[string]any{"capacity": 32},
-			"checkOnSave":   false,
-			"procMacro":     map[string]any{"enable": false},
-			"cargo":         map[string]any{"buildScripts": map[string]any{"enable": false}},
-			"diagnostics":   map[string]any{"disabled": []string{"unresolved-proc-macro", "unresolved-macro-call"}},
+			"cachePriming": map[string]any{"enable": false},
+			"lru":          map[string]any{"capacity": 32},
+			"checkOnSave":  false,
+			"procMacro":    map[string]any{"enable": false},
+			"cargo":        map[string]any{"buildScripts": map[string]any{"enable": false}},
+			"diagnostics":  map[string]any{"disabled": []string{"unresolved-proc-macro", "unresolved-macro-call"}},
 		},
 		Env: map[string]string{"CARGO_BUILD_JOBS": "2"},
 	},
@@ -192,6 +192,23 @@ func Presets() []Preset {
 	copy(out, presets)
 	return out
 }
+
+// UseFake has every server be the fake one of the tests, started with
+// start: a test of what Mayoi does with a server needs no server installed,
+// and the same one runs on every machine. It is undone by RestorePresets.
+func UseFake(extensions []string, command []string, env map[string]string) {
+	presets = []Preset{{
+		ID: "fake", Name: "Fake Server",
+		Command: command, Extensions: extensions, Env: env,
+		LanguageIDs: map[string]string{"fake": "fake", "go": "go"},
+	}}
+}
+
+// RestorePresets puts back the servers UseFake replaced.
+func RestorePresets() { presets = builtin }
+
+// builtin are the servers Mayoi starts, which UseFake replaces.
+var builtin = presets
 
 // extension is the extension of a path, lowercased and without its dot.
 func extension(path string) string {

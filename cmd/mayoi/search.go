@@ -108,6 +108,9 @@ type searchState struct {
 	// version counts the changes of files and collapsed, and rowsOf is the
 	// version rows were made for.
 	version, rowsOf int
+	// refs is set while the view lists where a name is used rather than
+	// the matches of a query: the files are then the server's.
+	refs bool
 }
 
 // searchKey is what a search's results depend on: the query and its
@@ -798,6 +801,12 @@ func (a *app) replaceAllInFiles() {
 func (a *app) searchView(c *ui.Context) {
 	p := a.pal
 	s := &a.inFiles
+	if s.refs {
+		// Where a name is used: the matches of a search done for the
+		// editor, which the field of the query would search again.
+		a.searchRefs(c)
+		return
+	}
 	if k := s.searchKey(); k != s.key {
 		s.key, s.typedAt, s.waiting = k, time.Now(), true
 		bg.AfterFunc(searchPause, a.invalidate)
@@ -867,6 +876,31 @@ func (a *app) searchView(c *ui.Context) {
 		})
 	})
 	a.searchResults(c)
+}
+
+// searchRefs is the view of where a name is used: what the editor asked
+// the server of its file, under their files, and a button that asks its
+// file's search again.
+func (a *app) searchRefs(c *ui.Context) {
+	p := a.pal
+	s := &a.inFiles
+	ui.Row(c).Gap(6).AlignItems(ui.Center).Padding(4, 12, 0, 20).Children(func() {
+		ui.Text(c, locales.LspReferencesTitle(s.count)).FontSize(12).TextColor(p.text).SingleLine().Grow(1).Shrink(1)
+		if a.smallButton(c, iconX, locales.LspReferencesClose()) {
+			a.endReferences()
+		}
+	})
+	a.searchResults(c)
+}
+
+// endReferences shows the search of the files again, in place of where a
+// name is used.
+func (a *app) endReferences() {
+	s := &a.inFiles
+	s.refs = false
+	s.files, s.count = nil, 0
+	s.changed()
+	a.invalidate()
 }
 
 // searchField is a text field of the search view, with what goes after
@@ -956,7 +990,17 @@ func (a *app) searchResults(c *ui.Context) {
 	c.SetTheme(&quiet)
 	var action func()
 	first := firstMatchRow(rows)
-	out := ui.List(c.Key("search"), &s.list, len(rows), func(i int) {
+	// Each row is a key of its own: two references can be of one line, and
+	// a list gives two rows that share a key one state.
+	style := &s.list
+	list := style
+	if s.refs {
+		keyed := *style
+		keyed.Key = func(i int) any { return i }
+		s.list = keyed
+		list = &s.list
+	}
+	out := ui.List(c.Key("search"), list, len(rows), func(i int) {
 		r := rows[i]
 		f := files[r.file]
 		// Up from the first match goes back to the query; the row asks

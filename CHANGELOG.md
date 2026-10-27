@@ -23,6 +23,13 @@ needs a `## <version>` section here, or its build fails.
 - **AI Settings**, from the panel's gear or the palette, sets the protocol, the base URL, the key and what the assistant may do.
 - **AI Settings** also writes voices of your own, and instructions added to every prompt in every voice.
 - A failure in the panel offers the settings that may fix it.
+- **AI Settings** scrolls its body, so **Save** stays in the window while a long list of models is browsed.
+- A model of your own is typed in the field of **AI Settings** and kept with `Enter`, for an endpoint that does not list it.
+- Language servers start themselves for the files opened: errors and warnings wave under the code, and the status bar counts them.
+- `F12` goes to the definition of the name at the caret, and `Shift+F12` lists its references in the sidebar.
+- The status bar's error and warning counts go to the next one of their kind when clicked.
+- `lsp` in `settings.json` turns the language servers off, and **View → Language Servers** toggles them for the session.
+- A server that is not installed is passed over in silence: the editor works as it did without one.
 - MyGo 0.7.1: Shift-click extends terminal selections, and Powerline's rounded caps fill the line.
 - Mermaid nodes and subgraphs with a light `style` fill keep their labels readable in dark themes.
 

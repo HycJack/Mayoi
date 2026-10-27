@@ -104,6 +104,8 @@ func (a *app) commandsIn(t locales.Messages) []command {
 		{"go.commands", t.CmdGoCommands(), "Shift+CmdOrCtrl+P", func() { a.openQuick(">") }},
 		{"go.line", t.CmdGoLine(), "Ctrl+G", func() { a.openQuick(":") }},
 		{"go.symbol", t.CmdGoSymbol(), "Shift+CmdOrCtrl+O", func() { a.openQuick("@") }},
+		{"go.definition", t.CmdGoDefinition(), "F12", a.lspGoToDefinition},
+		{"go.references", t.CmdGoReferences(), "Shift+F12", a.lspFindReferences},
 		{"go.nextTab", t.CmdGoNextTab(), "Ctrl+Tab", func() { a.cycleTab(1) }},
 		{"go.prevTab", t.CmdGoPrevTab(), "Ctrl+Shift+Tab", func() { a.cycleTab(-1) }},
 		{"go.nextProject", t.CmdGoNextProject(), "Shift+CmdOrCtrl+]", func() { a.host.stepProject(1) }},
@@ -178,6 +180,7 @@ func (a *app) commandsIn(t locales.Messages) []command {
 		{"view.moveTabPrev", t.CmdViewMoveTabPrev(), "", func() { a.moveTabBy(-1) }},
 		{"view.wordWrap", t.CmdViewWordWrap(), "", a.toggleWordWrap},
 		{"view.vim", t.CmdViewVim(), "", a.toggleVim},
+		{"view.lsp", t.CmdViewLSP(), "", a.toggleLSP},
 		{"view.projectTabs", t.CmdViewProjectTabs(), "", a.toggleProjectTabs},
 		{"view.wordWrapTab", t.CmdViewWordWrapTab(), "Alt+Z", a.toggleTabWrap},
 		{"view.togglePreview", t.CmdViewTogglePreview(), "Shift+CmdOrCtrl+V", a.togglePreview},
@@ -525,7 +528,7 @@ func (a *app) menu(cli bool, run func(id string, win *mygo.Window)) *mygo.Menu {
 		{Label: locales.MenuView(), Submenu: []*mygo.MenuItem{
 			item("view.sidebar"), checkbox("view.sidebarRight", a.settings.SidebarRight), item("view.explorer"), item("view.search"), item("view.scm"), item("view.ai"), mygo.Separator(),
 			checkbox("view.wordWrap", a.settings.WordWrap), item("view.wordWrapTab"), item("view.togglePreview"), item("view.previewToSide"),
-			checkbox("view.vim", a.settings.Vim), checkbox("view.projectTabs", a.settings.ProjectTabs), mygo.Separator(),
+			checkbox("view.vim", a.settings.Vim), checkbox("view.lsp", a.lspEnabled()), checkbox("view.projectTabs", a.settings.ProjectTabs), mygo.Separator(),
 			item("view.splitRight"), item("view.nextColumn"), item("view.prevColumn"),
 			item("view.moveTabNext"), item("view.moveTabPrev"), mygo.Separator(),
 			item("view.terminal"), item("view.newTerminal"), item("view.terminalTab"), item("view.terminalMove"),
@@ -547,6 +550,7 @@ func (a *app) menu(cli bool, run func(id string, win *mygo.Window)) *mygo.Menu {
 		}},
 		{Label: locales.MenuGo(), Submenu: []*mygo.MenuItem{
 			item("go.quickOpen"), item("go.commands"), item("go.symbol"), item("go.line"), item("go.bracket"), mygo.Separator(),
+			item("go.definition"), item("go.references"), mygo.Separator(),
 			item("go.nextTab"), item("go.prevTab"), mygo.Separator(),
 			item("go.nextProject"), item("go.prevProject"),
 		}},

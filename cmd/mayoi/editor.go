@@ -10,6 +10,7 @@ import (
 
 	"mayoi/internal/highlight"
 	"mayoi/internal/linediff"
+	"mayoi/internal/lsp"
 	"mayoi/internal/settings"
 	"mayoi/locales"
 )
@@ -201,6 +202,7 @@ func (a *app) editorView(c *ui.Context, d *editor) {
 		jump := d.pending != nil
 		if r := d.pending; r != nil {
 			// A jump asked for goes where it goes: no pin puts it back.
+			// Its start is the caret, and what it marks is selected.
 			area.SetTextSelection(r[0], r[1])
 			d.pending, d.resync, d.parked, d.pinFrame = nil, false, -1, 0
 		}
@@ -330,6 +332,7 @@ func (a *app) editorView(c *ui.Context, d *editor) {
 			matches = a.vimMatches(d, snap, first, last)
 		}
 		deco := a.decorate(d, snap, first, last)
+		diags := d.diagMarks(a, snap, first, last)
 		d.git.Refresh(d.path, d.buf.Snapshot(), a.post)
 		marks := d.git.Lines
 		gitRuns := d.gitRuns()
@@ -497,6 +500,17 @@ func (a *app) editorView(c *ui.Context, d *editor) {
 					} else {
 						pt.Fill(box, p.match, 3)
 					}
+				})
+			}
+			// What a language server says is wrong, in a wave under the
+			// run it is of, in the color of how bad it is.
+			for _, dg := range diags {
+				col := p.diagError
+				if dg.severity == lsp.SeverityWarning {
+					col = p.diagWarning
+				}
+				place(r, dg.line, dg.x0, dg.x1, func(y, x0, x1 float32) {
+					waveUnderline(pt, x0, x1, y+lineH-2, col)
 				})
 			}
 			for _, h := range hints {
