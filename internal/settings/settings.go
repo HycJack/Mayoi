@@ -119,6 +119,9 @@ type Prefs struct {
 	// PreviewMermaid draws the blocks of Mermaid of a Markdown preview as
 	// the diagrams they make, rather than their source.
 	PreviewMermaid bool `json:"previewMermaid"`
+	// PreviewMath draws the TeX math of a Markdown preview, between $ and
+	// $, $$ and $$, or in a block of math, as the formulas it makes.
+	PreviewMath bool `json:"previewMath"`
 	// DiffLayout is how diffs show: "split" side by side, "inline" in
 	// one column, or "" side by side when they are wide enough to.
 	DiffLayout string `json:"diffLayout,omitempty"`
@@ -349,6 +352,9 @@ type Layout struct {
 	// at first, and CommitFilesWidth is how wide it is.
 	CommitFilesOpen  bool    `json:"commitFilesOpen,omitempty"`
 	CommitFilesWidth float32 `json:"commitFilesWidth,omitempty"`
+	// ScmChangesRatio is the share of the multi-repository view for changes.
+	// Zero fits the changes to their content, up to half the view.
+	ScmChangesRatio float32 `json:"scmChangesRatio,omitempty"`
 	// AIOpen shows the AI assistant's panel at the right of the window,
 	// and AIWidth is how wide it is.
 	AIOpen  bool    `json:"aiOpen,omitempty"`
@@ -434,7 +440,7 @@ func Default() *Settings {
 	return &Settings{
 		Prefs: Prefs{
 			FontSize: 13, FontFamily: "monospace", FontWeight: 400, LineHeight: 1.55,
-			AutoSave: true, Blame: true, TerminalCopyOnSelect: true, PreviewMermaid: true,
+			AutoSave: true, Blame: true, TerminalCopyOnSelect: true, PreviewMermaid: true, PreviewMath: true,
 			DiffAlignedRows: true, DiffContext: 3, DiffSyncScroll: true, MergeAutoApply: true,
 		},
 	}

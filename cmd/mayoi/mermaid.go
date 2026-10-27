@@ -421,26 +421,34 @@ func (st mermaidStyle) pelePalette() map[string]string {
 
 func hexColor(c ui.Color) string { return fmt.Sprintf("#%02x%02x%02x", c.R, c.G, c.B) }
 
+// mermaidFrame is what an element of Pele's SVG passes on to those
+// within it: where it is, and its fill and text's style.
+type mermaidFrame struct {
+	m                  affine
+	fill               string
+	size               float32
+	bold, italic, mono bool
+	anchor             string
+	shift              int
+	x, y, dy           string
+	preserve           bool
+	// under is the fill a node's or a subgraph's style gave its
+	// shape, which its labels are drawn on, transparent for none;
+	// ownFill says the text's style gave it its fill.
+	under   ui.Color
+	ownFill bool
+}
+
 // mermaidSVG makes what MyGo draws of the SVG Pele drew: its colors, which
 // are CSS variables, those of st, and its text taken out of it, as the
 // chunks of text that the window's text draws.
 func mermaidSVG(svg string, st mermaidStyle) ([]byte, []mermaidText, error) {
 	vars := st.pelePalette()
 	resolve := func(v string) string { return cssResolve(v, vars) }
-	type frame struct {
-		m                  affine
-		fill               string
-		size               float32
-		bold, italic, mono bool
-		anchor             string
-		shift              int
-		x, y, dy           string
-		preserve           bool
-	}
 	var (
 		out   bytes.Buffer
 		texts []mermaidText
-		stack = []frame{{m: identity, size: 16, anchor: "start"}}
+		stack = []mermaidFrame{{m: identity, size: 16, anchor: "start"}}
 		// text is the chunk being read of the text element read, and penX
 		// and penY where its next run goes.
 		text       *mermaidText
@@ -493,6 +501,24 @@ func mermaidSVG(svg string, st mermaidStyle) ([]byte, []mermaidText, error) {
 			}
 			if v, ok := prop("fill"); ok {
 				f.fill = v
+			}
+			// A shape filled by its style, as style and classDef fill
+			// it, is what the labels of its group are drawn on, and a
+			// text filled by it has the color they gave it.
+			for _, d := range decls {
+				switch {
+				case d[0] != "fill":
+				case t.Name.Local == "text" || inText > 0:
+					f.ownFill = true
+				case len(stack) > 1:
+					u := cssParseColor(resolve(d[1]), ui.Color{})
+					if v, ok := prop("fill-opacity"); ok {
+						if n, err := strconv.ParseFloat(v, 32); err == nil {
+							u = u.Alpha(float32(n))
+						}
+					}
+					stack[len(stack)-1].under = u
+				}
 			}
 			// A size "smaller" is a subscript's or a superscript's, which
 			// their style makes smaller.
@@ -632,10 +658,32 @@ func mermaidSVG(svg string, st mermaidStyle) ([]byte, []mermaidText, error) {
 			if f.mono {
 				style |= peleMono
 			}
-			text.runs = append(text.runs, mermaidRun{text: s, size: f.size, style: style, color: cssParseColor(f.fill, st.fg)})
+			text.runs = append(text.runs, mermaidRun{text: s, size: f.size, style: style, color: f.color(st)})
 		}
 	}
 	return out.Bytes(), texts, nil
+}
+
+// labelContrast is the least contrast a label keeps with the fill a
+// style gave its shape, below which it is drawn in another color.
+const labelContrast = 3
+
+// color is the color of a frame's text: its fill, or, when the style of
+// its shape gave that a fill the fill of the diagram reads poorly on,
+// whichever of the theme's text and background reads better on it.
+func (f mermaidFrame) color(st mermaidStyle) ui.Color {
+	c := cssParseColor(f.fill, st.fg)
+	if f.ownFill || f.under.A == 0 {
+		return c
+	}
+	u := f.under.Over(st.bg)
+	if contrast(c.Over(st.bg), u) >= labelContrast {
+		return c
+	}
+	if contrast(st.fg, u) >= contrast(st.bg, u) {
+		return st.fg
+	}
+	return st.bg
 }
 
 func xmlName(n xml.Name) string {

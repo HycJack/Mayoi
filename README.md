@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/673e7907-2b2c-4ed6-9093-1ba9633cd61c
   search, Git and terminals run on the host, and its ports forward to this machine
 - **Image viewer:** PNG, JPEG, GIF, WebP and BMP
 - **Previews:** a live preview of Markdown, SVG and Mermaid beside the source (⇧⌘V), with the Markdown's Mermaid
-  blocks drawn as diagrams
+  blocks drawn as diagrams and its LaTeX math as formulas
 - **Windows:** a window per folder or every folder in one window as project tabs, a welcome page with the recent
   folders and hosts, Open Recent (⌃R), and a `mayoi` shell command that opens files at a line, compares them, waits
   for them to close and runs any command

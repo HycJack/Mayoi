@@ -162,12 +162,27 @@ tree, with a count of them. Files are grouped as merge changes, staged changes, 
 ### Submodules and repository selection
 
 Initialized submodules, including nested submodules, appear as separate,
-collapsible sections in Source Control. Each section shows its branch or detached
-HEAD, staged changes and working changes. Clean repositories use only a header
-row; repositories with changes show their own commit message and button.
-Staging, unstaging, discarding and committing apply to that section's repository. A submodule commit
-updates the parent's submodule entry; stage and commit that reference separately.
-Uninitialized submodules remain entries in the parent until initialized externally.
+collapsible sections in one continuously scrolling Source Control list. The
+current repository's header stays at the top while its changes scroll beneath
+it. The current change group (such as Staged Changes or Changes) stays directly
+beneath that header, with its counts and actions, until the next group or
+repository pushes it away. Headers combine the repository name, branch or
+detached HEAD, and repository actions; a narrow sidebar keeps remote actions in
+each repository's **⋯** menu.
+Repositories with changes start expanded; clean repositories start collapsed and
+can be expanded to show their retained commit draft and a disabled commit button.
+The arrow expands or collapses a section; clicking its name selects its history.
+Each repository keeps its own commit draft, selection and Git operations.
+Staging, unstaging, discarding and committing apply to that section's repository.
+Parent entries distinguish a changed submodule commit reference from uncommitted
+content inside it. Commit the submodule's files first, then stage and commit the
+updated reference in the parent separately. Uninitialized submodules remain
+entries in the parent until initialized externally.
+
+Changes and history scroll independently. Until the divider is dragged, changes
+fit their content up to half the view, leaving more room for history when most
+repositories are clean. Dragging the divider saves its position with the
+workspace's layout.
 
 With multiple repositories, the lower part of Source Control shows the selected
 repository's commit graph. The repository button in its header and in the status
@@ -345,7 +360,7 @@ PNG, JPEG, GIF, WebP and BMP files open in a viewer, fitted to the view on a che
 
 An SVG opens as text. ⇧⌘V, or the button at the end of the breadcrumbs, shows it as an image that updates as you type.
 
-Markdown (`.md` and `.markdown`) opens as text too. ⇧⌘V or the same button shows a read-only, scrollable preview with headings, formatted text, links, nested lists, task lists, quotes, highlighted code, tables and local images. Split with ⌘\ to keep source in one column and a live preview in the other. **Open Preview to the Side** does both at once, the text keeping the keyboard. The preview scrolls with the text beside it, and the text with the preview as you scroll it. Tables are as wide as their text, and the status bar counts the words and the minutes to read them. GitHub's alerts, `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` and `[!CAUTION]`, show with their icons and colors; a block of code has its language in the corner and a Copy Code button under the pointer; a link to `#a-heading` scrolls to that heading. Preview state is restored with the session. Remote images show their alt text without network requests. A path starting with `/` is taken from the root of the file's Git repository, or else of the workspace, as GitHub takes it. HTML comments and front matter are hidden, `<br>` breaks the line, and other HTML is displayed as text.
+Markdown (`.md` and `.markdown`) opens as text too. ⇧⌘V or the same button shows a read-only, scrollable preview with headings, formatted text, links, nested lists, task lists, quotes, highlighted code, tables and local images. Split with ⌘\ to keep source in one column and a live preview in the other. **Open Preview to the Side** does both at once, the text keeping the keyboard; it uses the column beside the file, right or else left, when there is one. The preview scrolls with the text beside it, and the text with the preview as you scroll it. Tables are as wide as their text, and the status bar counts the words and the minutes to read them. GitHub's alerts, `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` and `[!CAUTION]`, show with their icons and colors; a block of code has its language in the corner and a Copy Code button under the pointer; a link to `#a-heading` scrolls to that heading. Preview state is restored with the session. Remote images show their alt text without network requests. A path starting with `/` is taken from the root of the file's Git repository, or else of the workspace, as GitHub takes it. HTML comments and front matter are hidden, `<br>` breaks the line, and other HTML is displayed as text.
 
 ## Columns
 
@@ -387,6 +402,13 @@ Files dropped on a terminal type their paths, quoted for the shell. ⌘V with on
 bracketed paste, as VS Code's terminal does, so that Claude Code pastes the screenshot. Selecting text copies it, as
 in Ghostty and iTerm2: a drag, a double click for a word, a triple click for a line, Shift with a drag in a program
 that takes the mouse, or Select All. `terminalCopyOnSelect` turns it off.
+
+Command-click a file path in a local terminal (Control-click on Linux and Windows) to open it in Mayoi, including
+files Git ignores. Recognized paths use forward slashes: `/absolute/path`, `~/path`, `./path`, `../path`, or a
+relative path containing a slash. A filename with a `:line` or `:line:column` suffix works too; the suffix places
+the caret there. Relative paths use the directory the shell reports, or the terminal's starting directory when
+it reports none. Windows drive-letter and backslash paths are not recognized yet. Holding Command (Control
+elsewhere) over a recognized path underlines it and shows a hand cursor.
 
 On Windows and Linux the shell has the keys with Ctrl, which edit its line, except the workbench's: Quick Open, the
 Command Palette, the terminal and the sidebar toggles, Next and Previous Tab, Alt+1 to Alt+9 and zoom, and every

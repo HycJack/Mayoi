@@ -101,6 +101,31 @@ func TestMermaidSVG(t *testing.T) {
 	}
 }
 
+func TestMermaidStyledFillLabels(t *testing.T) {
+	st := testMermaidStyle()
+	source := "flowchart LR\n subgraph S[\"sub\"]\n A[aa]\n end\n A --> B[bb] --> C[cc] --> D[dd]\n" +
+		"style S fill:#ffe\n style B fill:#fdd,stroke:#c00\n style C fill:#fdd,color:#f00\n style D fill:#333\n"
+	svg, err := peleRender(source, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, texts, err := mermaidSVG(svg, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	colors := map[string]ui.Color{}
+	for _, x := range texts {
+		for _, r := range x.runs {
+			colors[r.text] = r.color
+		}
+	}
+	for text, want := range map[string]ui.Color{"sub": st.bg, "aa": st.fg, "bb": st.bg, "cc": ui.Hex("#ff0000"), "dd": st.fg} {
+		if got := colors[text]; got != want {
+			t.Errorf("%s in %+v, want %+v", text, got, want)
+		}
+	}
+}
+
 func TestCSSResolve(t *testing.T) {
 	vars := map[string]string{"--a": "var(--b)", "--b": "#112233"}
 	for in, want := range map[string]string{

@@ -629,8 +629,9 @@ func (a *app) togglePreview() {
 	}
 }
 
-// previewToSide shows the preview of the document shown in a column to
-// the right, beside its text, which keeps the keyboard.
+// previewToSide shows the preview of the document shown in the column
+// beside it, to its right or else its left, or in a new one to its right,
+// and the text keeps the keyboard.
 func (a *app) previewToSide() {
 	d := a.activeEditor()
 	if d == nil || !canPreview(d.document) {
@@ -641,8 +642,22 @@ func (a *app) previewToSide() {
 		a.setPreview(d, false)
 	}
 	src := a.column()
-	a.splitRight()
-	side := a.activeEditor()
+	var side *editor
+	switch col := a.sideColumn(src); {
+	case col == nil:
+		a.splitRight()
+		side = a.activeEditor()
+	case col.showing(d.document) >= 0:
+		// The column shows the document already: that tab previews it.
+		i := col.showing(d.document)
+		a.activate(col, i, true)
+		side = col.tabs[i].ed
+	default:
+		at := col.active + 1
+		a.addTab(col, at, &colTab{ed: cloneEditor(d)})
+		a.activate(col, at, true)
+		side = col.tabs[at].ed
+	}
 	// The text takes the keyboard back before the preview is shown, which
 	// would take it.
 	if col, i := a.locate(src.tab()); col != nil {

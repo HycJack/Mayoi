@@ -17,6 +17,32 @@ needs a `## <version>` section here, or its build fails.
 - The assistant can answer as **Coder**, **Architect**, **Code Reviewer**, **Security** or **Designer**, or in its own voice.
 - Your own voices go in `ai.personas`; a `MAYOI.md` in the folder tells the assistant how the project works.
 - `ai.provider` and `ai.model` choose the model; a missing key or an unknown model says which it was.
+- MyGo 0.7.1: Shift-click extends terminal selections, and Powerline's rounded caps fill the line.
+- Mermaid nodes and subgraphs with a light `style` fill keep their labels readable in dark themes.
+
+## 0.12.2
+
+- **Source Control** shows a folder's repositories and submodules in one list that scrolls as a whole.
+- Repository and change-group headers in **Source Control** stay pinned at the top while their files scroll.
+- Each repository header in **Source Control** has its own branch, remote and **⋯** actions.
+- A repository's arrow expands or collapses it; clicking its name shows its history.
+- Drag the divider between changes and history in **Source Control** to resize them for the folder.
+- Submodule rows in **Source Control** say whether the commit reference or the content changed.
+- Command-clicking a file path in a local terminal opens it in the editor, even if Git ignores it.
+- Terminal paths ending in `:line` or `:line:column` open with the caret at that spot.
+- **Open Preview to the Side** opens the preview in the column beside the file instead of adding one.
+- The Markdown preview shows footnotes like `[^1]` as raised numbers, with the notes listed at the end.
+- Clicking a footnote's number scrolls to its note, and the note's `↩` scrolls back.
+
+## 0.12.1
+
+- A file with a line too long to show, such as a minified `.map`, no longer opens and freezes Mayoi.
+- Such a file left open is not reopened at launch, so Mayoi starts again.
+- The Markdown preview draws LaTeX math between `$` and `$` as formulas within the text.
+- Math between `$$` and `$$`, or in a `math` code block, shows as a centered formula of its own.
+- A formula Mayoi cannot draw shows its source in red, and a block of math also says why.
+- `previewMath` set to `false` shows math as its source.
+- The Markdown preview links bare URLs right after punctuation such as `：`, as GitHub does.
 
 ## 0.12.0
 

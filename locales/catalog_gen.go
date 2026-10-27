@@ -8,6 +8,7 @@ import (
 	"github.com/egoist/mygo/i18n"
 
 	// MyGo's own strings in the app's languages.
+	_ "github.com/egoist/mygo/locales/ja"
 	_ "github.com/egoist/mygo/locales/zh-Hans"
 )
 
@@ -45,6 +46,26 @@ func (msgs Messages) CmdViewSelectTheme() string {
 	return Catalog.Format(msgs.locale, "cmdViewSelectTheme", nil)
 }
 
+// ErrMathText says "it uses characters the math font lacks"
+// in the language the app shows.
+func ErrMathText() string { return In(i18n.Locale()).ErrMathText() }
+
+// ErrMathText says "it uses characters the math font lacks"
+// in the language of msgs.
+func (msgs Messages) ErrMathText() string {
+	return Catalog.Format(msgs.locale, "errMathText", nil)
+}
+
+// ErrMathTimeout says "the formula took too long to draw"
+// in the language the app shows.
+func ErrMathTimeout() string { return In(i18n.Locale()).ErrMathTimeout() }
+
+// ErrMathTimeout says "the formula took too long to draw"
+// in the language of msgs.
+func (msgs Messages) ErrMathTimeout() string {
+	return Catalog.Format(msgs.locale, "errMathTimeout", nil)
+}
+
 // ErrMermaidTimeout says "the diagram took too long to draw"
 // in the language the app shows.
 func ErrMermaidTimeout() string { return In(i18n.Locale()).ErrMermaidTimeout() }
@@ -53,6 +74,16 @@ func ErrMermaidTimeout() string { return In(i18n.Locale()).ErrMermaidTimeout() }
 // in the language of msgs.
 func (msgs Messages) ErrMermaidTimeout() string {
 	return Catalog.Format(msgs.locale, "errMermaidTimeout", nil)
+}
+
+// MathCannotDraw says "Cannot draw the math: {err}"
+// in the language the app shows.
+func MathCannotDraw(err string) string { return In(i18n.Locale()).MathCannotDraw(err) }
+
+// MathCannotDraw says "Cannot draw the math: {err}"
+// in the language of msgs.
+func (msgs Messages) MathCannotDraw(err string) string {
+	return Catalog.Format(msgs.locale, "mathCannotDraw", map[string]any{"err": err})
 }
 
 // MermaidCannotDraw says "Cannot draw the diagram: {err}"
@@ -4425,6 +4456,16 @@ func FailBinaryNow(name string) string { return In(i18n.Locale()).FailBinaryNow(
 // in the language of msgs.
 func (msgs Messages) FailBinaryNow(name string) string {
 	return Catalog.Format(msgs.locale, "failBinaryNow", map[string]any{"name": name})
+}
+
+// FailLongLine says "{name} has a line too long to show"
+// in the language the app shows.
+func FailLongLine(name string) string { return In(i18n.Locale()).FailLongLine(name) }
+
+// FailLongLine says "{name} has a line too long to show"
+// in the language of msgs.
+func (msgs Messages) FailLongLine(name string) string {
+	return Catalog.Format(msgs.locale, "failLongLine", map[string]any{"name": name})
 }
 
 // FailCopy says "Could not copy: {err}"
@@ -9503,6 +9544,16 @@ func (msgs Messages) ScmResetTo(branch string) string {
 	return Catalog.Format(msgs.locale, "scmResetTo", map[string]any{"branch": branch})
 }
 
+// ScmResizeChanges says "Resize Changes and History"
+// in the language the app shows.
+func ScmResizeChanges() string { return In(i18n.Locale()).ScmResizeChanges() }
+
+// ScmResizeChanges says "Resize Changes and History"
+// in the language of msgs.
+func (msgs Messages) ScmResizeChanges() string {
+	return Catalog.Format(msgs.locale, "scmResizeChanges", nil)
+}
+
 // ScmRevealInExplorer says "Reveal in Explorer"
 // in the language the app shows.
 func ScmRevealInExplorer() string { return In(i18n.Locale()).ScmRevealInExplorer() }
@@ -9531,6 +9582,16 @@ func ScmRunningGit() string { return In(i18n.Locale()).ScmRunningGit() }
 // in the language of msgs.
 func (msgs Messages) ScmRunningGit() string {
 	return Catalog.Format(msgs.locale, "scmRunningGit", nil)
+}
+
+// ScmSelectRepository says "Select Repository {name}"
+// in the language the app shows.
+func ScmSelectRepository(name string) string { return In(i18n.Locale()).ScmSelectRepository(name) }
+
+// ScmSelectRepository says "Select Repository {name}"
+// in the language of msgs.
+func (msgs Messages) ScmSelectRepository(name string) string {
+	return Catalog.Format(msgs.locale, "scmSelectRepository", map[string]any{"name": name})
 }
 
 // ScmShowAllBranches says "Show All Branches"
@@ -9603,6 +9664,46 @@ func (msgs Messages) ScmStopWriting() string {
 	return Catalog.Format(msgs.locale, "scmStopWriting", nil)
 }
 
+// ScmSubmoduleCommit says "Submodule commit changed"
+// in the language the app shows.
+func ScmSubmoduleCommit() string { return In(i18n.Locale()).ScmSubmoduleCommit() }
+
+// ScmSubmoduleCommit says "Submodule commit changed"
+// in the language of msgs.
+func (msgs Messages) ScmSubmoduleCommit() string {
+	return Catalog.Format(msgs.locale, "scmSubmoduleCommit", nil)
+}
+
+// ScmSubmoduleCommitLabel says "Reference"
+// in the language the app shows.
+func ScmSubmoduleCommitLabel() string { return In(i18n.Locale()).ScmSubmoduleCommitLabel() }
+
+// ScmSubmoduleCommitLabel says "Reference"
+// in the language of msgs.
+func (msgs Messages) ScmSubmoduleCommitLabel() string {
+	return Catalog.Format(msgs.locale, "scmSubmoduleCommitLabel", nil)
+}
+
+// ScmSubmoduleContentLabel says "Content"
+// in the language the app shows.
+func ScmSubmoduleContentLabel() string { return In(i18n.Locale()).ScmSubmoduleContentLabel() }
+
+// ScmSubmoduleContentLabel says "Content"
+// in the language of msgs.
+func (msgs Messages) ScmSubmoduleContentLabel() string {
+	return Catalog.Format(msgs.locale, "scmSubmoduleContentLabel", nil)
+}
+
+// ScmSubmoduleDirty says "Uncommitted changes in submodule"
+// in the language the app shows.
+func ScmSubmoduleDirty() string { return In(i18n.Locale()).ScmSubmoduleDirty() }
+
+// ScmSubmoduleDirty says "Uncommitted changes in submodule"
+// in the language of msgs.
+func (msgs Messages) ScmSubmoduleDirty() string {
+	return Catalog.Format(msgs.locale, "scmSubmoduleDirty", nil)
+}
+
 // ScmSummary says "Summary"
 // in the language the app shows.
 func ScmSummary() string { return In(i18n.Locale()).ScmSummary() }
@@ -9621,6 +9722,16 @@ func ScmSummaryLong() string { return In(i18n.Locale()).ScmSummaryLong() }
 // in the language of msgs.
 func (msgs Messages) ScmSummaryLong() string {
 	return Catalog.Format(msgs.locale, "scmSummaryLong", nil)
+}
+
+// ScmToggleRepository says "Expand or Collapse {name}"
+// in the language the app shows.
+func ScmToggleRepository(name string) string { return In(i18n.Locale()).ScmToggleRepository(name) }
+
+// ScmToggleRepository says "Expand or Collapse {name}"
+// in the language of msgs.
+func (msgs Messages) ScmToggleRepository(name string) string {
+	return Catalog.Format(msgs.locale, "scmToggleRepository", map[string]any{"name": name})
 }
 
 // ScmTreeClean says "The working tree is clean."

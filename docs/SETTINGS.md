@@ -59,6 +59,7 @@ takes its default.
 | `autoSave`              | `true`        | `true`, `false`                                             | **File → Auto Save**                           |
 | `wordWrap`              | `false`       | `true`, `false`                                             | **View → Word Wrap**                           |
 | `previewMermaid`        | `true`        | `true`, `false`                                             | Only this file                                 |
+| `previewMath`           | `true`        | `true`, `false`                                             | Only this file                                 |
 | `vim`                   | `false`       | `true`, `false`                                             | **View → Vim Mode**                            |
 | `vimCtrlKeys`           | `false`       | `true`, `false`                                             | Only this file                                 |
 | `blame`                 | `true`        | `true`, `false`                                             | **Git → Inline Blame**                         |
@@ -120,6 +121,8 @@ differ in width lines them up only roughly.
   setting changes.
 - **`previewMermaid`** draws the `mermaid` code blocks of a Markdown preview as diagrams. Turn it off to show
   them as code. A `.mmd` or `.mermaid` file's own preview draws its diagram either way.
+- **`previewMath`** draws the LaTeX math of a Markdown preview, between `$` and `$`, `$$` and `$$`, or in a
+  `math` code block, as formulas. Turn it off to show the source.
 - **`diffHighlight`** chooses whether changed lines show word-level, character-level or line-level tinting. The
   highlighting changes how a diff looks; block actions still use whole line hunks.
 - **`diffContext`** keeps that many unchanged lines around each diff hunk visible and folds the rest.
