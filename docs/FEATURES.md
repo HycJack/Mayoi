@@ -411,6 +411,13 @@ the first question and cut to 40 characters. **New Chat**, in the panel's head, 
 beside it opens a past one, newest first, with how long ago it changed. A conversation is written once it has an answer,
 and a chat that cannot be written says so without losing what is on the screen.
 
+The button beside the list chooses whose voice answers: Mayoi's own, or one of the five it comes with — Coder, Architect,
+Code Reviewer, Security, Designer — whose instructions come from terax-clone's `agents.ts`. `ai.personas` in
+`settings.json` adds voices of your own, `{"id": "mine", "name": "Mine", "instructions": "…"}`, after the five. A
+`MAYOI.md` at the top of the folder joins the assistant's prompt, so the project can say how it works: it is read again
+every 30 seconds, and cut at 32 KB on a line. What the assistant is told of the folder also names the file on screen, so
+that "this function" means the one being looked at.
+
 The assistant works on the folder through tools: `read` a file with its lines, `glob` for the paths, `grep` for the text,
 `write` and `edit` to change a file, `open_file` to show one in the editor at a line, and `bash` to run a command, which
 is offered only with `ai.allowBash`. A write arrives as a card with the lines it adds and removes: **Approve** writes

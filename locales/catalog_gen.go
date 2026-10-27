@@ -415,6 +415,36 @@ func (msgs Messages) AiNoChats() string {
 	return Catalog.Format(msgs.locale, "aiNoChats", nil)
 }
 
+// AiPersonaOwn says "The assistant"
+// in the language the app shows.
+func AiPersonaOwn() string { return In(i18n.Locale()).AiPersonaOwn() }
+
+// AiPersonaOwn says "The assistant"
+// in the language of msgs.
+func (msgs Messages) AiPersonaOwn() string {
+	return Catalog.Format(msgs.locale, "aiPersonaOwn", nil)
+}
+
+// AiPersonaOwnWhy says "Mayoi's own voice, asked to help with this folder."
+// in the language the app shows.
+func AiPersonaOwnWhy() string { return In(i18n.Locale()).AiPersonaOwnWhy() }
+
+// AiPersonaOwnWhy says "Mayoi's own voice, asked to help with this folder."
+// in the language of msgs.
+func (msgs Messages) AiPersonaOwnWhy() string {
+	return Catalog.Format(msgs.locale, "aiPersonaOwnWhy", nil)
+}
+
+// AiPersonaTitle says "Voice"
+// in the language the app shows.
+func AiPersonaTitle() string { return In(i18n.Locale()).AiPersonaTitle() }
+
+// AiPersonaTitle says "Voice"
+// in the language of msgs.
+func (msgs Messages) AiPersonaTitle() string {
+	return Catalog.Format(msgs.locale, "aiPersonaTitle", nil)
+}
+
 // AiPlaceholder says "Ask the assistant"
 // in the language the app shows.
 func AiPlaceholder() string { return In(i18n.Locale()).AiPlaceholder() }

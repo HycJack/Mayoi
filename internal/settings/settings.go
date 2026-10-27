@@ -209,12 +209,24 @@ type Prefs struct {
 type AISettings struct {
 	Provider string `json:"provider,omitempty"`
 	Model    string `json:"model,omitempty"`
+	// Personas are the voices the user wrote, after the ones that come
+	// with Mayoi.
+	Personas []Persona `json:"personas,omitempty"`
 	// ApproveEdits writes what the assistant asks without a card, as the
 	// user asked once and for all.
 	ApproveEdits bool `json:"approveEdits,omitempty"`
 	// AllowBash lets the assistant run commands in the folder, each one
 	// approved first unless ApproveEdits is set.
 	AllowBash bool `json:"allowBash,omitempty"`
+}
+
+// Persona is a voice the user wrote for the assistant: what it is called,
+// what it is for, and what it is told to be.
+type Persona struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Description  string `json:"description,omitempty"`
+	Instructions string `json:"instructions"`
 }
 
 // TabStyle is a project's own look on the rail: Label, up to two
@@ -341,6 +353,8 @@ type Layout struct {
 	// and AIWidth is how wide it is.
 	AIOpen  bool    `json:"aiOpen,omitempty"`
 	AIWidth float32 `json:"aiWidth,omitempty"`
+	// AIPersona is whose voice the assistant answers in, "" for its own.
+	AIPersona string `json:"aiPersona,omitempty"`
 }
 
 // DefaultLayout is the layout of a first launch.

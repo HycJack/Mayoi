@@ -142,7 +142,7 @@ func TestTheAssistantSendsWhatWasTyped(t *testing.T) {
 	if len(*sent) != 1 {
 		t.Fatalf("sent %d requests", len(*sent))
 	}
-	if got := *sent; got[0].Prompt != "what is this" {
+	if got := *sent; !strings.HasPrefix(got[0].Prompt, "what is this") {
 		t.Errorf("the prompt is %q", got[0].Prompt)
 	}
 	if len(a.ai.msgs) != 2 || a.ai.msgs[0].role != "user" || a.ai.msgs[0].text != "what is this" {
@@ -266,7 +266,7 @@ func TestTheAssistantUsesTheFolderTools(t *testing.T) {
 	if got.Model.ID != "faux-1" || got.APIKey != "test-key" {
 		t.Errorf("the run is %+v", got)
 	}
-	if got.Prompt != "what is in main.go" {
+	if !strings.HasPrefix(got.Prompt, "what is in main.go") {
 		t.Errorf("the prompt is %q", got.Prompt)
 	}
 }
@@ -569,5 +569,79 @@ func TestTheListOpensAChat(t *testing.T) {
 	hs.settle()
 	if len(a.ai.msgs) != 2 || a.ai.msgs[0].text != "first question" {
 		t.Errorf("the chat that opened is %+v", a.ai.msgs)
+	}
+}
+
+func TestTheChosenPersonaIsWhatAnswers(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	sent := hs.fakeStream([]string{"Looks good."}, nil)
+	a.window.AIPersona = "reviewer"
+	hs.ask("review this")
+	if got := *sent; len(got) != 1 {
+		t.Fatalf("sent %d runs", len(got))
+	}
+	if !strings.Contains((*sent)[0].System, "meticulous code reviewer") {
+		t.Errorf("the system prompt is %q", (*sent)[0].System)
+	}
+}
+
+func TestTheQuestionCarriesWhereTheUserIs(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	sent := hs.fakeStream([]string{"ok"}, nil)
+	hs.ask("what does this do")
+	run := (*sent)[0]
+	if !strings.Contains(run.Prompt, "<env>") || !strings.Contains(run.Prompt, a.root) {
+		t.Errorf("the prompt is %q", run.Prompt)
+	}
+	if !strings.Contains(run.Prompt, "what does this do") {
+		t.Errorf("the prompt lost the question: %q", run.Prompt)
+	}
+}
+
+func TestTheProjectsMemoryReachesTheModel(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	if err := os.WriteFile(filepath.Join(a.root, "MAYOI.md"), []byte("Always write tests first.\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sent := hs.fakeStream([]string{"ok"}, nil)
+	hs.ask("how do we work here")
+	if !strings.Contains((*sent)[0].System, "Always write tests first.") {
+		t.Errorf("the system prompt is %q", (*sent)[0].System)
+	}
+}
+
+func TestTheVoiceIsChosenFromTheList(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.toggleAI()
+	hs.settle()
+	if err := hs.tt.Click(locales.AiPersonaTitle()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if !a.ai.menu {
+		t.Fatal("the list of voices did not open")
+	}
+	if err := hs.tt.Click("Code Reviewer"); err != nil {
+		t.Fatalf("the reviewer is not listed: %v", err)
+	}
+	hs.settle()
+	if a.window.AIPersona != "reviewer" || a.ai.menu {
+		t.Errorf("the voice is %q, list open %v", a.window.AIPersona, a.ai.menu)
+	}
+	// And back to the assistant's own.
+	if err := hs.tt.Click(locales.AiPersonaTitle()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if err := hs.tt.Click(locales.AiPersonaOwn()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if a.window.AIPersona != "" {
+		t.Errorf("the voice is %q", a.window.AIPersona)
 	}
 }

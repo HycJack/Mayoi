@@ -65,6 +65,8 @@ type aiPanel struct {
 	// listed is what the folder's conversations were when the list
 	// opened, nil once they are read.
 	listed []ai.Chat
+	// menu says the list of voices is open.
+	menu bool
 }
 
 // aiMessage is a message of the conversation: whose it is, "user" or
@@ -175,8 +177,8 @@ func (a *app) send() {
 	run := ai.Run{
 		Model:    model,
 		APIKey:   key,
-		System:   aiChatSystem,
-		Prompt:   text,
+		System:   ai.SystemFor(a.persona(), aiChatSystem, ai.Memory(a.root)),
+		Prompt:   text + "\n\n" + ai.Env(a.root, a.aiOpenPath()),
 		Messages: ai.Transcript(spoken(p.msgs[:last])),
 		Tools:    append(tools.Sets(), a.aiOpenTool()),
 	}
@@ -327,6 +329,111 @@ func lastSaid(msgs []piai.Message) string {
 		}
 	}
 	return ""
+}
+
+// persona is whose voice the assistant answers in: the one this window
+// chose, or none, the assistant's own.
+func (a *app) persona() ai.Persona {
+	id := a.window.AIPersona
+	if id == "" {
+		return ai.Persona{}
+	}
+	if p := ai.PersonaByID(a.personas(), id); p != nil {
+		return *p
+	}
+	return ai.Persona{}
+}
+
+// personas is the voices the panel offers: the five that come with Mayoi,
+// then the ones settings keep.
+func (a *app) personas() []ai.Persona {
+	custom := make([]ai.Persona, 0, len(a.settings.AI.Personas))
+	for _, p := range a.settings.AI.Personas {
+		custom = append(custom, ai.Persona{
+			ID: p.ID, Name: p.Name, Description: p.Description, Instructions: p.Instructions,
+		})
+	}
+	return ai.Personas(custom)
+}
+
+// aiOpenPath is the file on screen, "" when no file has it.
+func (a *app) aiOpenPath() string {
+	if e := a.activeEditor(); e != nil {
+		return e.path
+	}
+	return ""
+}
+
+// togglePersonas opens or closes the list of voices.
+func (a *app) togglePersonas() {
+	a.ai.menu = !a.ai.menu
+	a.invalidate()
+}
+
+// choosePersona answers in the voice id, "" for the assistant's own.
+func (a *app) choosePersona(id string) {
+	a.window.AIPersona = id
+	a.ai.menu = false
+	a.settings.Changed()
+	a.invalidate()
+}
+
+// personaMenu is the list of voices, over the panel.
+func (a *app) personaMenu(c *ui.Context) {
+	p := &a.ai
+	if !p.menu {
+		return
+	}
+	pal := a.pal
+	ui.Overlay(c, func() {
+		back := a.dialogBack(c, "ai-personas")
+		back.Children(func() {
+			box := a.floating(c, ui.Column(c).Width(420).MaxWidthPercent(92).Margin(titleBarH+8, 0, 0, 0).Radius(10), true).Clip().
+				Role(ui.RoleDialog).Label(locales.AiPersonaTitle())
+			box.Children(func() {
+				ui.Row(c).Padding(10, 14).Gap(10).AlignItems(ui.Center).
+					BorderWidth(0, 0, 1, 0).BorderColor(pal.border).Children(func() {
+					ui.Icon(c, iconSparkles).FontSize(15).TextColor(pal.muted)
+					ui.Text(c, locales.AiPersonaTitle()).FontSize(14).FontWeight(600).TextColor(pal.text).Grow(1).SingleLine()
+				})
+				ui.Scroll(c.Key("ai-persona-list")).MaxHeight(380).Padding(6).Children(func() {
+					a.personaRow(c, ai.Persona{Name: locales.AiPersonaOwn(), Description: locales.AiPersonaOwnWhy()})
+					for _, p := range a.personas() {
+						a.personaRow(c, p)
+					}
+				})
+			})
+			if box.PressedOutside() || back.OverlayShortcut(0, ui.KeyEscape) {
+				a.post(func() {
+					p.menu = false
+					a.invalidate()
+				})
+			}
+		})
+	})
+}
+
+// personaRow is one voice of the list, the one in use marked.
+func (a *app) personaRow(c *ui.Context, p ai.Persona) {
+	pal := a.pal
+	chosen := a.window.AIPersona == p.ID
+	row := ui.ButtonBase(c.Key("ai-persona:"+p.ID)).Padding(5, 10).Gap(10).Radius(6).
+		Justify(ui.Start).AlignItems(ui.Center).Label(p.Name)
+	if row.Hovered() {
+		row.Background(pal.hover)
+	}
+	if row.Clicked() {
+		a.post(func() { a.choosePersona(p.ID) })
+	}
+	row.Children(func() {
+		a.pickMark(c, chosen, "ai-personas")
+		ui.Column(c).Gap(1).Grow(1).Children(func() {
+			ui.Text(c, p.Name).FontSize(13).TextColor(pal.text).SingleLine()
+			if p.Description != "" {
+				ui.Text(c, p.Description).FontSize(11.5).TextColor(pal.muted).SingleLine()
+			}
+		})
+	})
 }
 
 // aiTools are the assistant's tools, rooted at the window's folder, with
@@ -519,6 +626,7 @@ func (a *app) aiSidePanel(c *ui.Context) {
 		}
 	})
 	a.aiChatListView(c)
+	a.personaMenu(c)
 }
 
 // aiTitleRow is the head of the assistant's panel: its name, the new
@@ -537,6 +645,9 @@ func (a *app) aiTitleRow(c *ui.Context) {
 		}
 		if a.iconButton(c, iconListTree, locales.AiChats(), false).Clicked() {
 			a.post(a.toggleChats)
+		}
+		if a.iconButton(c, iconSparkles, locales.AiPersonaTitle(), false).Clicked() {
+			a.post(a.togglePersonas)
 		}
 	})
 }

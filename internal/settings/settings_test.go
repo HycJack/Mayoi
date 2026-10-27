@@ -519,3 +519,14 @@ func TestTheConversationsAreBesideTheSettings(t *testing.T) {
 		t.Errorf("the chats are at %q, want %q", got, want)
 	}
 }
+
+func TestTheSettingsKeepThePersonasWritten(t *testing.T) {
+	dir := t.TempDir()
+	s := Load(filepath.Join(dir, "settings.json"))
+	s.AI.Personas = []Persona{{ID: "mine", Name: "Mine", Instructions: "Be terse."}}
+	s.Flush()
+	got := Load(filepath.Join(dir, "settings.json"))
+	if len(got.AI.Personas) != 1 || got.AI.Personas[0].Instructions != "Be terse." {
+		t.Errorf("loaded %+v", got.AI.Personas)
+	}
+}
