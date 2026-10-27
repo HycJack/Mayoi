@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -131,14 +130,14 @@ func (p *aiPanel) running() bool {
 // words of the locale, or the failure wrapped.
 func (a *app) aiSaid(err error) string {
 	var noKey aiNoKey
-	var unknown aiUnknownModel
+	var noModel aiNoModel
 	switch {
 	case errors.As(err, &noKey) && noKey.wanted:
-		return locales.AiNoKeyFor(noKey.provider)
+		return locales.AiNoKeyFor(ai.DisplayName(noKey.protocol))
 	case errors.As(err, &noKey):
 		return locales.AiNoKey()
-	case errors.As(err, &unknown):
-		return locales.AiUnknownModel(unknown.provider + "/" + unknown.model)
+	case errors.As(err, &noModel):
+		return locales.AiNoModel()
 	}
 	return locales.AiChatFailed(err.Error())
 }
@@ -587,64 +586,55 @@ func spoken(msgs []aiMessage) []ai.Message {
 	return out
 }
 
-// aiTarget is the model the assistant asks, and its key. The settings
-// name one; left empty, the first provider a key was given for answers,
-// with its first model. Every way of finding none says which it was.
+// aiTarget is the model the assistant asks, and its key. The settings name
+// a protocol, an endpoint and a model; left unset, the protocol a key was
+// given for answers, and every way of finding none says which it was.
 func (a *app) aiTarget() (piai.Model, string, error) {
 	keys, err := ai.LoadKeys(a.settings.AIPath())
 	if err != nil {
 		return piai.Model{}, "", err
 	}
 	want := a.settings.AI
-	if want.Provider != "" {
-		m, err := ai.Resolve(want.Provider, a.modelOf(want.Provider, want.Model))
-		if err != nil {
-			return piai.Model{}, "", aiUnknownModel{provider: want.Provider, model: cmp.Or(want.Model, "its first model")}
-		}
-		key := keys[want.Provider]
-		if key == "" {
-			return piai.Model{}, "", aiNoKey{wanted: true, provider: want.Provider}
-		}
-		return m, key, nil
+	protocol := want.Protocol
+	if protocol == "" {
+		protocol = ai.ProtocolOf(keys)
 	}
-	for _, name := range ai.Providers() {
-		if key := keys[name]; key != "" {
-			m, err := ai.Resolve(name, a.modelOf(name, want.Model))
-			if err != nil {
-				return piai.Model{}, "", aiUnknownModel{provider: name, model: want.Model}
-			}
-			return m, key, nil
-		}
+	key := keys[protocol]
+	if key == "" {
+		return piai.Model{}, "", aiNoKey{wanted: want.Protocol != "", protocol: protocol}
 	}
-	return piai.Model{}, "", aiNoKey{}
+	m, err := ai.Target(protocol, want.BaseURL, a.modelOf())
+	if err != nil {
+		return piai.Model{}, "", aiNoModel{}
+	}
+	return m, key, nil
 }
 
-// modelOf is the model to ask a provider for: the one the settings name,
-// or the provider's first.
-func (a *app) modelOf(provider, model string) string {
-	if model != "" {
-		return model
+// modelOf is the model to ask for: the one the settings name, or the first
+// kept, which is what a settings dialog asks for.
+func (a *app) modelOf() string {
+	if m := a.settings.AI.Model; m != "" {
+		return m
 	}
-	if models := ai.Models(provider); len(models) > 0 {
-		return models[0].ID
+	if models := a.settings.AI.Models; len(models) > 0 {
+		return models[0]
 	}
 	return ""
 }
 
-// aiNoKey is the failure of a send with no key for its provider, wanted
-// when the settings name that provider.
+// aiNoKey is the failure of a send with no key for its protocol, wanted
+// when the settings name that protocol.
 type aiNoKey struct {
 	wanted   bool
-	provider string
+	protocol string
 }
 
-func (e aiNoKey) Error() string { return "no API key for " + e.provider }
+func (e aiNoKey) Error() string { return "no API key for " + e.protocol }
 
-// aiUnknownModel is the failure of a send for a model the provider does
-// not offer.
-type aiUnknownModel struct{ provider, model string }
+// aiNoModel is the failure of a send whose settings keep no model.
+type aiNoModel struct{}
 
-func (e aiUnknownModel) Error() string { return "unknown model " + e.provider + "/" + e.model }
+func (e aiNoModel) Error() string { return "no model chosen" }
 
 // aiSidePanel is the assistant's panel, at the right edge of the window:
 // what it leaves for the editors and the sidebar is theirs, as the

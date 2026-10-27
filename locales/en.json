@@ -272,15 +272,23 @@
     }
   },
   "aiNoKeyFor": "Add an API key for {provider} to ai-keys.json: the settings name it.",
+  "aiNoModel": "Choose a model in AI Settings before asking anything.",
   "aiNewChat": "New Chat",
   "aiNoChats": "No chats yet.",
   "aiConfAddVoice": "Add a voice",
   "aiConfApprove": "Approve each edit",
   "aiConfApproveWhy": "The assistant asks before it writes a file.",
+  "aiConfBaseURL": "Base URL",
+  "aiConfBaseURLWhy": "Empty asks the protocol's own service.",
   "aiConfBash": "Allow commands",
   "aiConfBashWhy": "The assistant may run shell commands, each approved first.",
+  "aiConfDrop": "Drop this model",
   "aiConfExtra": "Extra instructions",
   "aiConfExtraWhy": "Added to every prompt, in every voice.",
+  "aiConfFetch": "Fetch models",
+  "aiConfFetched": "{count, plural, one {# model} other {# models}}",
+  "aiConfFetching": "Fetching…",
+  "aiConfFilter": "Filter",
   "aiConfKey": "API key",
   "@aiConfKeyKept": {
     "placeholders": {
@@ -290,9 +298,16 @@
   "aiConfKeyKept": "A key is kept for {provider}.",
   "aiConfKeyPlaceholder": "sk-…",
   "aiConfKeyWhy": "Kept in ai-keys.json, which is not synced to your account.",
-  "aiConfModel": "Model",
-  "aiConfNoProvider": "Choose a provider first.",
-  "aiConfProvider": "Provider",
+  "aiConfKeep": "Keep this model",
+  "aiConfModels": "Models",
+  "aiConfModelsWhy": "Keep what you need, then click the one that answers.",
+  "aiConfMore": "{count, plural, one {# more: type to narrow the list} other {# more: type to narrow the list}}",
+  "aiConfNoModel": "Keep a model first.",
+  "aiConfNoModels": "Nothing fetched yet.",
+  "aiConfNoProtocol": "Choose a protocol first.",
+  "aiConfProtocol": "Protocol",
+  "aiConfProtocolAnthropic": "Anthropic-compatible",
+  "aiConfProtocolOpenAI": "OpenAI-compatible",
   "aiConfRemove": "Remove this voice",
   "aiConfTitle": "AI Settings",
   "aiConfVoiceName": "Name",
@@ -316,12 +331,6 @@
     }
   },
   "aiToolRan": "Ran {tools}",
-  "@aiUnknownModel": {
-    "placeholders": {
-      "model": {}
-    }
-  },
-  "aiUnknownModel": "{model} is not a model the assistant knows.",
   "aiYou": "You",
   "alertCaution": "Caution",
   "alertImportant": "Important",

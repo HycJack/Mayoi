@@ -139,6 +139,7 @@ M1–M4 均已完成并合入，以下为实施中与设计不同、或尚未做
 | 设计 | 实况 |
 |---|---|
 | §2 `AI.SystemExtra` | 已做，且在 **AI Settings** 对话框里可视编辑 |
+| §1 多 provider（Anthropic/OpenAI/Google/Bedrock…）与内置模型目录 | 只留两种协议：`openai` 与 `anthropic`（`ai.protocol`），配 `ai.baseUrl` 指向任何同协议的服务器；模型不再内置，而是 **Fetch models** 从端点拉取后勾选（`ai.models`），点一行决定回答用哪个（`ai.model`）。base URL 即该协议自身路径的起点，故模型列表是 `GET <baseUrl>/models` |
 | §2 密钥手改 `ai-keys.json` | 保留手改即生效，另加 **AI Settings** 里填 key（写 `0o600`，不进同步） |
 | §3 工具卡片显示参数与可折叠结果 | 只显示工具名；`bash` 显示命令、写操作显示行级 diff —— 结果常常很大，折叠进面板会让消息流难读 |
 | §3 `EventCompaction` 提示“上下文已压缩” | 未做：pi-ai-go 的 `agent` 事件流没有这个事件（`core` 只有 `CompactionCancelledError`），等上游 |

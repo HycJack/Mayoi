@@ -424,11 +424,14 @@ what you want to know about the code of the folder, press Enter, and the answer 
 as it is, and an answer stopped before it said anything is marked as stopped. Dragging the panel's inner edge sizes it,
 and both whether it is open and its width are kept with the window, as the sidebar's are.
 
-The model comes from pi-ai-go's catalog. `ai.provider` and `ai.model` in `settings.json` choose it; left out, the first
-provider with a key answers, with its first model. A send that cannot go through says why: no key for the provider the
-settings name, no key at all, or a model the provider does not offer. API keys are not in `settings.json`, which the
-account syncs: they live in `ai-keys.json` beside it, one key per provider. The file is written as
-`{"anthropic": "sk-..."}`.
+The endpoint is one of two protocols, `openai` or `anthropic`, and `ai.baseUrl` points it at any server that speaks
+one: `ai.protocol` and `ai.model` in `settings.json` choose them, and a `baseUrl` left out is the service's own
+(`https://api.openai.com/v1`, `https://api.anthropic.com/v1`). **Fetch models** asks the endpoint which models it
+offers — `GET <baseUrl>/models`, where the base URL is where the protocol's own paths start — and lists them; **+**
+beside a model keeps it in `ai.models`, and clicking a row makes it the one that answers. A kept model that the
+endpoint no longer lists stays kept. A send that cannot go through says why: no key for the protocol, no model chosen,
+or a model the endpoint refused. API keys are not in `settings.json`, which the account syncs: they live in
+`ai-keys.json` beside it, one key per protocol. The file is written as `{"anthropic": "sk-..."}`.
 
 Every answer is kept, with its question, in `ai-sessions/` beside the settings, one file per conversation, named after
 the first question and cut to 40 characters. **New Chat**, in the panel's head, starts another conversation; the list
@@ -444,10 +447,11 @@ Code Reviewer, Security, Designer — whose instructions come from terax-clone's
 every 30 seconds, and cut at 32 KB on a line. What the assistant is told of the folder also names the file on screen, so
 that "this function" means the one being looked at.
 
-**AI Settings**, from the panel's gear, **View → AI Settings** or the palette, sets what the assistant is: the provider
-and its model, the key it asks with, whether a write asks first, whether it may run commands, and what is added to every
-prompt in every voice. The key goes to `ai-keys.json`, which is not synced; the panel says it is kept without showing it.
-The same dialog writes voices of your own — a name and what it is told — beside the built-in five, and a voice named
+**AI Settings**, from the panel's gear, **View → AI Settings** or the palette, sets what the assistant is: the protocol,
+its base URL and key, the models kept and the one that answers, whether a write asks first, whether it may run
+commands, and what is added to every prompt in every voice. The key goes to `ai-keys.json`, which is not synced; the
+panel says it is kept without showing it. The same dialog writes voices of your own — a name and what it is told —
+beside the built-in five, and a voice named
 after one that comes with Mayoi takes an id of its own, as the setting names the voice by it. A failure in the panel
 offers the settings that may fix it.
 

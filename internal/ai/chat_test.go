@@ -60,27 +60,49 @@ func TestAnAnswerThatSaidNothingShowsNothing(t *testing.T) {
 	}
 }
 
-func TestProvidersAndModelsAreListed(t *testing.T) {
-	ps := Providers()
-	if len(ps) == 0 {
-		t.Fatal("no providers")
+func TestTheTwoProtocolsAskTheirOwnService(t *testing.T) {
+	ps := Protocols()
+	if len(ps) != 2 || ps[0] != OpenAI || ps[1] != Anthropic {
+		t.Fatalf("the protocols are %v", ps)
 	}
-	found := false
-	for _, p := range ps {
-		if p == "anthropic" {
-			found = true
-			if len(Models(p)) == 0 {
-				t.Errorf("%s has no models", p)
-			}
+	for _, tc := range []struct{ protocol, base, want string }{
+		{OpenAI, "", "https://api.openai.com/v1/models"},
+		{Anthropic, "", "https://api.anthropic.com/v1/models"},
+		// A base URL is where the protocol's own paths start: a server
+		// laid out like OpenAI already ends at its version.
+		{OpenAI, "http://localhost:11434/v1/", "http://localhost:11434/v1/models"},
+		{Anthropic, "https://proxy.example/v1", "https://proxy.example/v1/models"},
+	} {
+		if got := ModelsURL(tc.protocol, tc.base); got != tc.want {
+			t.Errorf("%s at %q lists at %s, want %s", tc.protocol, tc.base, got, tc.want)
 		}
-	}
-	if !found {
-		t.Errorf("no anthropic among %v", ps)
 	}
 }
 
-func TestResolveOfAnUnknownModelFails(t *testing.T) {
-	if _, err := Resolve("anthropic", "no-such-model"); err == nil {
-		t.Fatal("no error")
+func TestATargetSpeaksTheProtocolWhereTheURLPoints(t *testing.T) {
+	m, err := Target(Anthropic, "https://proxy.example/", "claude-x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.API != piai.APIAnthropicMessages || m.BaseURL != "https://proxy.example" || m.ID != "claude-x" {
+		t.Errorf("%s at %s speaks %s", m.ID, m.BaseURL, m.API)
+	}
+	if m.ContextWindow == 0 || m.MaxTokens == 0 || len(m.Input) == 0 {
+		t.Errorf("the model is described as %+v", m)
+	}
+	if m, err = Target(OpenAI, "", "gpt-x"); err != nil {
+		t.Fatal(err)
+	}
+	if m.API != piai.APIOpenAICompletions || m.BaseURL != DefaultBaseURL(OpenAI) {
+		t.Errorf("openai speaks %s at %s", m.API, m.BaseURL)
+	}
+}
+
+func TestATargetOfNoProtocolOrModelFails(t *testing.T) {
+	if _, err := Target("grpc", "", "x"); err == nil {
+		t.Error("a protocol neither of the two was taken")
+	}
+	if _, err := Target(OpenAI, "", "  "); err == nil {
+		t.Error("a model that is nothing was taken")
 	}
 }

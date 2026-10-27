@@ -210,8 +210,16 @@ type Prefs struct {
 
 // AISettings is the AI assistant's settings, which hold no secrets.
 type AISettings struct {
-	Provider string `json:"provider,omitempty"`
-	Model    string `json:"model,omitempty"`
+	// Protocol is how the endpoint speaks: "openai" or "anthropic", the
+	// two shapes the assistant knows.
+	Protocol string `json:"protocol,omitempty"`
+	// BaseURL is where the endpoint is, "" for the protocol's own
+	// service.
+	BaseURL string `json:"baseUrl,omitempty"`
+	// Model is the one answers are asked of, and Models the ones kept
+	// from the models the endpoint lists.
+	Model  string   `json:"model,omitempty"`
+	Models []string `json:"models,omitempty"`
 	// Personas are the voices the user wrote, after the ones that come
 	// with Mayoi.
 	Personas []Persona `json:"personas,omitempty"`

@@ -4,11 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"mayoi/internal/ai"
 	"mayoi/locales"
@@ -18,6 +22,20 @@ import (
 	"github.com/HycJack/pi-ai-go/core"
 	"github.com/egoist/mygo/ui"
 )
+
+// waitFor draws frames until cond holds, or says it never did: frames are
+// what runs the work a background job posts, and the word the endpoint
+// gave lands there.
+func waitFor(t *testing.T, hs *harness, cond func() bool) {
+	t.Helper()
+	for deadline := time.Now().Add(10 * time.Second); !cond(); {
+		if time.Now().After(deadline) {
+			t.Fatal("it never happened")
+		}
+		time.Sleep(5 * time.Millisecond)
+		hs.tt.Frame()
+	}
+}
 
 // ownChats puts this window's chats in a folder of their own, so that a
 // test sees no conversation another test wrote.
@@ -116,20 +134,18 @@ func TestTheAssistantSaysWhatItNeedsToAnswer(t *testing.T) {
 	}
 	// What was typed stays in the field, to send once the key is there.
 	a.target = func() (piai.Model, string, error) {
-		return piai.Model{}, "", aiNoKey{wanted: true, provider: "anthropic"}
+		return piai.Model{}, "", aiNoKey{wanted: true, protocol: ai.Anthropic}
 	}
 	a.send()
 	hs.settle()
-	if !hs.tt.HasText("Add an API key for anthropic") {
+	if !hs.tt.HasText("Add an API key for Anthropic") {
 		t.Errorf("the provider is not named: %q", hs.tt.Texts())
 	}
-	a.target = func() (piai.Model, string, error) {
-		return piai.Model{}, "", aiUnknownModel{provider: "anthropic", model: "nope"}
-	}
+	a.target = func() (piai.Model, string, error) { return piai.Model{}, "", aiNoModel{} }
 	a.send()
 	hs.settle()
-	if !hs.tt.HasText("anthropic/nope is not a model") {
-		t.Errorf("the model is not named: %q", hs.tt.Texts())
+	if !hs.tt.HasText("Choose a model in AI Settings") {
+		t.Errorf("no word about the model: %q", hs.tt.Texts())
 	}
 }
 
@@ -778,31 +794,178 @@ func TestTheSettingsChooseTheModel(t *testing.T) {
 	hs := newHarness(t, true)
 	a := hs.a
 	hs.openAIConf()
+	// The endpoint speaks OpenAI's protocol like the service itself.
+	hs.a.aiConf.protocol = ai.OpenAI
 	if !a.aiConf.open {
 		t.Fatal("the settings did not open")
 	}
-	if err := hs.tt.Click("openai"); err != nil {
-		t.Fatalf("the provider is not listed: %v", err)
+	if err := hs.tt.Click(locales.AiConfProtocolAnthropic()); err != nil {
+		t.Fatalf("the protocol is not listed: %v", err)
 	}
 	hs.settle()
-	if a.aiConf.provider != "openai" {
-		t.Fatalf("the provider is %q", a.aiConf.provider)
+	if a.aiConf.protocol != ai.Anthropic {
+		t.Fatalf("the protocol is %q", a.aiConf.protocol)
 	}
-	// The models of the provider are the ones it offers, and the row
-	// clicks are the same list: the model is chosen as the dialog does.
-	if !hs.tt.HasText("gpt-4o") {
-		t.Error("the models are not listed")
+	// The models listed are the ones kept, and a row clicked is the model
+	// that answers, which keeps it.
+	a.aiConf.listed = []string{"claude-a", "claude-b"}
+	hs.settle()
+	if err := hs.tt.Click("claude-b"); err != nil {
+		t.Fatal(err)
 	}
-	a.aiConf.model = "gpt-4o"
+	hs.settle()
+	if a.aiConf.model != "claude-b" || len(a.aiConf.models) != 1 {
+		t.Fatalf("the models are %q with %v answering", a.aiConf.models, a.aiConf.model)
+	}
 	if err := hs.tt.Click(locales.ButtonSave()); err != nil {
 		t.Fatal(err)
 	}
 	hs.settle()
-	if a.settings.AI.Provider != "openai" || a.settings.AI.Model != "gpt-4o" {
-		t.Errorf("the settings say %q/%q", a.settings.AI.Provider, a.settings.AI.Model)
+	if a.settings.AI.Protocol != ai.Anthropic || a.settings.AI.Model != "claude-b" {
+		t.Errorf("the settings say %q/%q", a.settings.AI.Protocol, a.settings.AI.Model)
 	}
 	if a.aiConf.open {
 		t.Error("the settings stayed open")
+	}
+}
+
+func TestAModelRowStaysPutUnderThePointer(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	hs.a.aiConf.protocol = ai.OpenAI
+	a.aiConf.listed = []string{"a-1", "a-2", "a-3"}
+	hs.settle()
+	// Where a row is, and where it is with the pointer over it: a row that
+	// moves is a list that cannot be clicked.
+	for _, model := range a.aiConf.listed {
+		before, ok := hs.tt.Find(model)
+		if !ok {
+			t.Fatalf("no row for %q", model)
+		}
+		hs.tt.Move(before.X+before.W/2, before.Y+before.H/2)
+		hs.settle()
+		after, ok := hs.tt.Find(model)
+		if !ok {
+			t.Fatalf("the row for %q went", model)
+		}
+		if after != before {
+			t.Errorf("the row for %q moved from %v to %v under the pointer", model, before, after)
+		}
+		hs.tt.Move(0, 0)
+		hs.settle()
+	}
+}
+
+func TestAModelIsKeptAndDropped(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	// The endpoint speaks OpenAI's protocol like the service itself.
+	hs.a.aiConf.protocol = ai.OpenAI
+	a.aiConf.listed = []string{"a-1", "a-2"}
+	hs.settle()
+	if err := hs.tt.Click(locales.AiConfKeep()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if len(a.aiConf.models) != 1 || a.aiConf.models[0] != "a-1" {
+		t.Fatalf("the kept models are %v", a.aiConf.models)
+	}
+	// The first one kept answers while nothing else was chosen.
+	if a.aiConf.model != "a-1" {
+		t.Errorf("%q answers", a.aiConf.model)
+	}
+	if err := hs.tt.Click(locales.AiConfDrop()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if len(a.aiConf.models) != 0 || a.aiConf.model != "" {
+		t.Errorf("dropping left %v with %q answering", a.aiConf.models, a.aiConf.model)
+	}
+}
+
+func TestTheModelsAreFetchedAndNarrowed(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	var mu sync.Mutex
+	var auth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Path; got != "/models" {
+			t.Errorf("asked for %s", got)
+		}
+		// The endpoint says little of itself: what a body claims of the
+		// test that reads it is not its to send.
+		mu.Lock()
+		auth = r.Header.Get("Authorization")
+		mu.Unlock()
+		var out struct {
+			Data []struct{ ID string } `json:"data"`
+		}
+		for i := 0; i < aiConfRows+2; i++ {
+			out.Data = append(out.Data, struct{ ID string }{ID: "m-" + strconv.Itoa(i)})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(out)
+	}))
+	defer srv.Close()
+	hs.openAIConf()
+	// The endpoint speaks OpenAI's protocol like the service itself.
+	hs.a.aiConf.protocol = ai.OpenAI
+	a.aiConf.base = srv.URL
+	a.aiConf.key = "sk-typed"
+	hs.settle()
+	if err := hs.tt.Click(locales.AiConfFetch()); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, hs, func() bool { return len(a.aiConf.listed) == aiConfRows+2 })
+	// The key typed is the one looked with, before anything is saved.
+	mu.Lock()
+	got := auth
+	mu.Unlock()
+	if got != "Bearer sk-typed" {
+		t.Errorf("the key sent is %q", got)
+	}
+	if !hs.tt.HasText("m-0") {
+		t.Errorf("the models are not listed: %q", hs.tt.Texts())
+	}
+	// The list is cut to what a dialog shows, and says how many follow.
+	shown, more := aiConfShown(&a.aiConf)
+	if len(shown) != aiConfRows || more != 2 {
+		t.Errorf("%d shown and %d more", len(shown), more)
+	}
+	narrowed := a.aiConf.filteredBy("m-1")
+	shown, more = aiConfShown(&narrowed)
+	if len(shown) != 1 || shown[0] != "m-1" || more != 0 {
+		t.Errorf("filtered to %v with %d more", shown, more)
+	}
+}
+
+// filteredBy is a copy of the dialog narrowed to what was typed.
+func (c aiSettings) filteredBy(f string) aiSettings {
+	c.filter = f
+	return c
+}
+
+func TestAFetchThatFailsSaysWhy(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":"bad key"}`, http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+	hs.openAIConf()
+	// The endpoint speaks OpenAI's protocol like the service itself.
+	hs.a.aiConf.protocol = ai.OpenAI
+	a.aiConf.base, a.aiConf.key = srv.URL, "sk-wrong"
+	hs.settle()
+	if err := hs.tt.Click(locales.AiConfFetch()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	waitFor(t, hs, func() bool { return a.aiConf.fetch != "" && !a.aiConf.fetching })
+	if !a.aiConf.failed || !strings.Contains(a.aiConf.fetch, "401") {
+		t.Fatalf("the failure says %q", a.aiConf.fetch)
 	}
 }
 
@@ -810,6 +973,10 @@ func TestTheKeyGoesInItsOwnFile(t *testing.T) {
 	hs := newHarness(t, true)
 	a := hs.a
 	hs.openAIConf()
+	// The endpoint speaks OpenAI's protocol like the service itself.
+	hs.a.aiConf.protocol = ai.OpenAI
+	// A model to answer with, or saving has nothing to save.
+	a.aiConf.model = "gpt-x"
 	a.aiConf.key = "sk-test-123"
 	a.saveAISettings()
 	hs.settle()
@@ -817,7 +984,7 @@ func TestTheKeyGoesInItsOwnFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if keys[a.aiConf.provider] != "sk-test-123" {
+	if keys[a.aiConf.protocol] != "sk-test-123" {
 		t.Errorf("the keys are %v", keys)
 	}
 	// The settings the account syncs hold no key.
@@ -830,6 +997,8 @@ func TestAVoiceIsWrittenInTheSettings(t *testing.T) {
 	hs := newHarness(t, true)
 	a := hs.a
 	hs.openAIConf()
+	// The endpoint speaks OpenAI's protocol like the service itself.
+	hs.a.aiConf.protocol = ai.OpenAI
 	if err := hs.tt.Click(locales.AiConfAddVoice()); err != nil {
 		t.Fatal(err)
 	}
@@ -839,8 +1008,12 @@ func TestAVoiceIsWrittenInTheSettings(t *testing.T) {
 	}
 	a.aiConf.voices[0].Name = "Plain Talk"
 	a.aiConf.voices[0].Instructions = "Say it plainly."
+	a.aiConf.model = "gpt-x"
 	a.saveAISettings()
 	hs.settle()
+	if a.aiConf.err != "" {
+		t.Fatalf("the dialog says %q", a.aiConf.err)
+	}
 	if len(a.settings.AI.Personas) != 1 {
 		t.Fatalf("the voices saved are %+v", a.settings.AI.Personas)
 	}
@@ -875,7 +1048,10 @@ func TestTheExtraInstructionsReachTheModel(t *testing.T) {
 	hs := newHarness(t, true)
 	a := hs.a
 	hs.openAIConf()
+	// The endpoint speaks OpenAI's protocol like the service itself.
+	hs.a.aiConf.protocol = ai.OpenAI
 	a.aiConf.extra = "Answer in French."
+	a.aiConf.model = "gpt-x"
 	a.saveAISettings()
 	hs.settle()
 	sent := hs.fakeStream([]string{"ok"}, nil)

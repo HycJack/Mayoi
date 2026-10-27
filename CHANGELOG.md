@@ -17,8 +17,10 @@ needs a `## <version>` section here, or its build fails.
 - A chat opened from that list is the same conversation: the assistant still knows what it read and wrote.
 - The assistant can answer as **Coder**, **Architect**, **Code Reviewer**, **Security** or **Designer**, or in its own voice.
 - Your own voices go in `ai.personas`; a `MAYOI.md` in the folder tells the assistant how the project works.
-- `ai.provider` and `ai.model` choose the model; a missing key or an unknown model says which it was.
-- **AI Settings**, from the panel's gear or the palette, sets the provider, the model, the key and what the assistant may do.
+- `ai.protocol` picks the endpoint: `openai` or `anthropic`, and `ai.baseUrl` points it at any server of that protocol.
+- **Fetch models** in **AI Settings** asks the endpoint what it offers, then **+** keeps the ones you need.
+- A kept model answers when its row is clicked, and the list stays still under the pointer while it is browsed.
+- **AI Settings**, from the panel's gear or the palette, sets the protocol, the base URL, the key and what the assistant may do.
 - **AI Settings** also writes voices of your own, and instructions added to every prompt in every voice.
 - A failure in the panel offers the settings that may fix it.
 - MyGo 0.7.1: Shift-click extends terminal selections, and Powerline's rounded caps fill the line.

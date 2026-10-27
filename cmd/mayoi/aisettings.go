@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"mayoi/internal/ai"
+	"mayoi/internal/bg"
 	"mayoi/internal/settings"
 	"mayoi/locales"
 	"strconv"
@@ -10,18 +12,32 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// aiSettings is the dialog that configures the assistant: the model it
-// asks, the key it asks with, what it may do in the folder, and the voices
-// it answers in. It edits a copy: nothing changes until Save.
+// aiSettings is the dialog that configures the assistant: the endpoint it
+// asks, the key it asks with, the models it may ask for, what it may do in
+// the folder, and the voices it answers in. It edits a copy: nothing
+// changes until Save.
 type aiSettings struct {
 	open bool
-	// provider and model are the model chosen, and kept is whether a key
-	// is kept for the provider, which the dialog says without showing it.
-	provider string
+	// protocol is how the endpoint speaks, base where it is, "" for the
+	// protocol's own service, and models the ones kept from the list it
+	// gave. model is the one of them that answers.
+	protocol string
+	base     string
 	model    string
-	kept     bool
-	// key is what was typed now, "" to keep the key kept.
-	key string
+	models   []string
+	// kept is whether a key is kept for the protocol, which the dialog
+	// says without showing it; key is what was typed now, "" to keep it.
+	kept bool
+	key  string
+	// listed is what the endpoint said it offers, and filter narrows it:
+	// an endpoint may offer more models than a dialog shows.
+	listed []string
+	filter string
+	// fetch says what fetching did, folded into asked when it failed, and
+	// fetching is whether it is asking now.
+	fetch    string
+	failed   bool
+	fetching bool
 	// approve writes without asking, and bash lets it run commands.
 	approve bool
 	bash    bool
@@ -33,20 +49,45 @@ type aiSettings struct {
 	err string
 }
 
+// aiConfRows is how many models the dialog lists at once: an endpoint can
+// name hundreds, and a dialog that scrolls jumps under the pointer.
+const aiConfRows = 8
+
+// aiConfProtocol is what a protocol is called where it is chosen.
+func aiConfProtocol(protocol string) string {
+	if protocol == ai.Anthropic {
+		return locales.AiConfProtocolAnthropic()
+	}
+	return locales.AiConfProtocolOpenAI()
+}
+
 // openAISettings shows the assistant's settings, as they are now.
 func (a *app) openAISettings() {
 	c := &a.aiConf
 	c.open = true
-	c.err = ""
-	c.provider, c.model = a.settings.AI.Provider, a.settings.AI.Model
+	c.err, c.fetch, c.failed = "", "", false
+	c.protocol, c.base = a.settings.AI.Protocol, a.settings.AI.BaseURL
+	if c.protocol == "" {
+		keys, err := ai.LoadKeys(a.settings.AIPath())
+		if err != nil {
+			c.err = a.aiSaid(err)
+		}
+		c.protocol = ai.ProtocolOf(keys)
+	}
+	c.model = a.settings.AI.Model
+	c.models = append([]string(nil), a.settings.AI.Models...)
+	c.listed, c.filter = append([]string(nil), c.models...), ""
+	// The field says where answers go now, which is the service of the
+	// protocol until another endpoint is named: a port typed after it
+	// makes the other one.
+	if c.base == "" {
+		c.base = ai.DefaultBaseURL(c.protocol)
+	}
 	keys, err := ai.LoadKeys(a.settings.AIPath())
 	if err != nil {
 		c.err = a.aiSaid(err)
 	}
-	if c.provider == "" {
-		c.provider = ai.DefaultProvider(keys)
-	}
-	c.kept = keys[c.provider] != ""
+	c.kept = keys[c.protocol] != ""
 	c.key = ""
 	c.approve, c.bash = a.settings.AI.ApproveEdits, a.settings.AI.AllowBash
 	c.extra = a.settings.AI.SystemExtra
@@ -54,11 +95,144 @@ func (a *app) openAISettings() {
 	a.invalidate()
 }
 
+// aiConfPick chooses a protocol, and reads whether a key is kept for it.
+func (a *app) aiConfPick(protocol string) {
+	c := &a.aiConf
+	if c.protocol == protocol {
+		return
+	}
+	c.protocol = protocol
+	// The list is the protocol's: what another endpoint offers says
+	// nothing of this one.
+	c.listed, c.fetch, c.failed = append([]string(nil), c.models...), "", false
+	keys, err := ai.LoadKeys(a.settings.AIPath())
+	if err != nil {
+		c.err = a.aiSaid(err)
+	}
+	c.kept = keys[protocol] != ""
+	a.invalidate()
+}
+
+// aiConfKeep keeps a model, or drops it. Dropping the one that answers
+// leaves the first of the rest answering, which is none of them.
+func (a *app) aiConfKeep(model string, keep bool) {
+	c := &a.aiConf
+	i := slicesIndex(c.models, model)
+	switch {
+	case keep && i < 0:
+		c.models = append(c.models, model)
+		if c.model == "" {
+			c.model = model
+		}
+	case !keep && i >= 0:
+		c.models = append(c.models[:i:i], c.models[i+1:]...)
+		if c.model == model {
+			c.model = ""
+			if len(c.models) > 0 {
+				c.model = c.models[0]
+			}
+		}
+	}
+	a.invalidate()
+}
+
+// aiConfUse makes a model the one that answers, which keeps it: a model
+// that answers is one of the kept.
+func (a *app) aiConfUse(model string) {
+	c := &a.aiConf
+	if slicesIndex(c.models, model) < 0 {
+		c.models = append(c.models, model)
+	}
+	c.model = model
+	a.invalidate()
+}
+
+// slicesIndex is where a model sits in what is kept, or -1.
+func slicesIndex(models []string, model string) int {
+	for i, m := range models {
+		if m == model {
+			return i
+		}
+	}
+	return -1
+}
+
+// fetchAIModels asks the endpoint which models it offers. It asks with the
+// key typed, or the one kept: a key given here is enough to look.
+func (a *app) fetchAIModels() {
+	c := &a.aiConf
+	if c.fetching {
+		return
+	}
+	protocol, base := c.protocol, strings.TrimSpace(c.base)
+	key := strings.TrimSpace(c.key)
+	if key == "" {
+		keys, err := ai.LoadKeys(a.settings.AIPath())
+		if err != nil {
+			c.err = a.aiSaid(err)
+			return
+		}
+		key = keys[protocol]
+	}
+	c.fetching, c.fetch, c.failed = true, locales.AiConfFetching(), false
+	a.invalidate()
+	// The progress a frame is what draws the spinner; the asking is the
+	// endpoint's, which waits, so it runs on a thread of its own.
+	go func() {
+		models, err := ai.FetchModels(context.Background(), protocol, base, key)
+		bg.Go(func() {
+			defer recoverCrash()
+			defer a.invalidate()
+			a.post(func() {
+				c.fetching = false
+				if err != nil {
+					c.fetch, c.failed = a.aiSaid(err), true
+					return
+				}
+				c.listed, c.failed = models, false
+				c.fetch = locales.AiConfFetched(len(models))
+				// A model kept from another endpoint is not in this list,
+				// and stays kept: the endpoint answers for what it is asked.
+				for _, m := range c.models {
+					if slicesIndex(models, m) < 0 {
+						c.listed = append(c.listed, m)
+					}
+				}
+			})
+		})
+	}()
+}
+
+// aiConfShown is the models the dialog lists: those matching what was
+// typed, at most aiConfRows of them, and how many more there are.
+func aiConfShown(c *aiSettings) (shown []string, more int) {
+	filter := strings.ToLower(strings.TrimSpace(c.filter))
+	for _, m := range c.listed {
+		if filter != "" && !strings.Contains(strings.ToLower(m), filter) {
+			continue
+		}
+		if len(shown) == aiConfRows {
+			more++
+			continue
+		}
+		shown = append(shown, m)
+	}
+	return shown, more
+}
+
 // saveAISettings writes what the dialog shows, and closes it.
 func (a *app) saveAISettings() {
 	c := &a.aiConf
-	if c.provider == "" {
-		c.err = locales.AiConfNoProvider()
+	if c.protocol != ai.OpenAI && c.protocol != ai.Anthropic {
+		c.err = locales.AiConfNoProtocol()
+		return
+	}
+	model := c.model
+	if model == "" && len(c.models) > 0 {
+		model = c.models[0]
+	}
+	if model == "" {
+		c.err = locales.AiConfNoModel()
 		return
 	}
 	if c.key != "" {
@@ -67,7 +241,7 @@ func (a *app) saveAISettings() {
 			c.err = a.aiSaid(err)
 			return
 		}
-		keys[c.provider] = strings.TrimSpace(c.key)
+		keys[c.protocol] = strings.TrimSpace(c.key)
 		if err := ai.SaveKeys(a.settings.AIPath(), keys); err != nil {
 			// The key stays where it is: a dialog that cannot save says
 			// so rather than closing as if it had.
@@ -76,7 +250,8 @@ func (a *app) saveAISettings() {
 		}
 	}
 	s := a.settings
-	s.AI.Provider, s.AI.Model = c.provider, c.model
+	s.AI.Protocol, s.AI.BaseURL = c.protocol, strings.TrimSpace(c.base)
+	s.AI.Model, s.AI.Models = model, c.models
 	s.AI.ApproveEdits, s.AI.AllowBash = c.approve, c.bash
 	s.AI.SystemExtra = strings.TrimSpace(c.extra)
 	s.AI.Personas = voicesOf(c.voices)
@@ -145,47 +320,35 @@ func (a *app) aiSettingsView(c *ui.Context) {
 			box.Children(func() {
 				ui.Text(c, locales.AiConfTitle()).FontSize(14).FontWeight(600).TextColor(p.text).SingleLine()
 
-				// The model: the provider first, then what it offers.
-				a.aiConfLabel(c, locales.AiConfProvider())
+				// The endpoint: how it speaks, where it is, and the key.
+				a.aiConfLabel(c, locales.AiConfProtocol())
 				ui.Row(c).Gap(6).Wrap().Children(func() {
-					for _, name := range ai.Providers() {
-						chosen := name == conf.provider
-						b := ui.Button(c, name)
+					for _, name := range ai.Protocols() {
+						chosen := name == conf.protocol
+						b := ui.Button(c, aiConfProtocol(name))
 						b.FontSize(11.5).Padding(4, 8)
 						if chosen {
 							b.Background(p.accent).TextColor(p.fillText)
 						}
 						if b.Clicked() && !chosen {
-							a.post(func() {
-								conf.provider, conf.model = name, ""
-								keys, _ := ai.LoadKeys(a.settings.AIPath())
-								conf.kept = keys[name] != ""
-							})
+							protocol := name
+							a.post(func() { a.aiConfPick(protocol) })
 						}
 					}
 				})
-				a.aiConfLabel(c, locales.AiConfModel())
-				ui.Scroll(c.Key("ai-conf-models")).MaxHeight(150).Children(func() {
-					for _, m := range ai.Models(conf.provider) {
-						chosen := m.ID == conf.model
-						row := ui.Button(c, m.ID)
-						row.FontSize(12).Padding(5, 10).Justify(ui.Start)
-						if chosen {
-							row.Background(p.selection).TextColor(p.text)
-						} else {
-							row.Background(p.editor)
-						}
-						if row.Clicked() && !chosen {
-							a.post(func() { conf.model = m.ID })
-						}
-					}
-				})
+				a.aiConfLabel(c, locales.AiConfBaseURL())
+				base := a.textKeys(ui.TextInputBase(c.Key("ai-conf-base"), &conf.base)).FontSize(12.5).
+					Placeholder(ai.DefaultBaseURL(conf.protocol)).Label(locales.AiConfBaseURL())
+				if base.Submitted() {
+					a.post(a.saveAISettings)
+				}
+				ui.Text(c, locales.AiConfBaseURLWhy()).FontSize(11).TextColor(p.faint).SingleLine()
 
 				// The key: never shown, and never in the settings file.
 				a.aiConfLabel(c, locales.AiConfKey())
 				hint := locales.AiConfKeyWhy()
 				if conf.kept {
-					hint = locales.AiConfKeyKept(conf.provider)
+					hint = locales.AiConfKeyKept(ai.DisplayName(conf.protocol))
 				}
 				in := a.textKeys(ui.TextInputBase(c.Key("ai-conf-key"), &conf.key)).FontSize(12.5).
 					Placeholder(locales.AiConfKeyPlaceholder()).Label(locales.AiConfKey())
@@ -193,6 +356,42 @@ func (a *app) aiSettingsView(c *ui.Context) {
 					a.post(a.saveAISettings)
 				}
 				ui.Text(c, hint).FontSize(11).TextColor(p.faint).SingleLine()
+
+				// The models: what the endpoint says it offers, and which
+				// of them the assistant may ask for.
+				a.aiConfLabel(c, locales.AiConfModels())
+				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+					fetch := locales.AiConfFetch()
+					if conf.fetching {
+						fetch = locales.AiConfFetching()
+					}
+					b := ui.Button(c, fetch).FontSize(11.5).Padding(4, 8).Disabled(conf.fetching)
+					if b.Clicked() {
+						a.post(a.fetchAIModels)
+					}
+					if conf.fetch != "" {
+						why := p.muted
+						if conf.failed {
+							why = p.dangerText
+						}
+						ui.Text(c, conf.fetch).FontSize(11).TextColor(why).SingleLine().Shrink(1)
+					}
+				})
+				ui.Text(c, locales.AiConfModelsWhy()).FontSize(11).TextColor(p.faint).SingleLine()
+				if len(conf.listed) > aiConfRows {
+					a.textKeys(ui.TextInputBase(c.Key("ai-conf-filter"), &conf.filter)).FontSize(12).
+						Placeholder(locales.AiConfFilter()).Label(locales.AiConfFilter())
+				}
+				shown, more := aiConfShown(conf)
+				for _, model := range shown {
+					a.aiConfModelRow(c, model)
+				}
+				if more > 0 {
+					ui.Text(c, locales.AiConfMore(more)).FontSize(11).TextColor(p.faint).SingleLine()
+				}
+				if len(shown) == 0 {
+					ui.Text(c, locales.AiConfNoModels()).FontSize(11.5).TextColor(p.faint).SingleLine()
+				}
 
 				a.aiConfCheck(c, &conf.approve, locales.AiConfApprove(), locales.AiConfApproveWhy())
 				a.aiConfCheck(c, &conf.bash, locales.AiConfBash(), locales.AiConfBashWhy())
@@ -235,6 +434,35 @@ func (a *app) aiSettingsView(c *ui.Context) {
 				a.invalidate()
 			}
 		})
+	})
+}
+
+// aiConfModelRow is one model the endpoint offers: the way to keep it or
+// drop it, and the model itself, which answers when it is clicked.
+func (a *app) aiConfModelRow(c *ui.Context, model string) {
+	conf := &a.aiConf
+	p := a.pal
+	kept := slicesIndex(conf.models, model) >= 0
+	mark, label := "+", locales.AiConfKeep()
+	if kept {
+		mark, label = "✓", locales.AiConfDrop()
+	}
+	ui.Row(c).Gap(2).AlignItems(ui.Center).Children(func() {
+		keep := ui.Button(c, mark).FontSize(11.5).Padding(2, 6).Label(label)
+		keep.Background(p.editor).TextColor(p.muted)
+		if keep.Clicked() {
+			was := kept
+			a.post(func() { a.aiConfKeep(model, !was) })
+		}
+		use := ui.Button(c, model).FontSize(11.5).Padding(4, 8).Justify(ui.Start).Grow(1)
+		if model == conf.model {
+			use.Background(p.selection).TextColor(p.text)
+		} else {
+			use.Background(p.editor)
+		}
+		if use.Clicked() {
+			a.post(func() { a.aiConfUse(model) })
+		}
 	})
 }
 

@@ -26,15 +26,23 @@
     }
   },
   "aiNoKeyFor": "ai-keys.json に {provider} の API key を追加してください。設定が指定しています。",
+  "aiNoModel": "先に AI 設定でモデルを選んでください。",
   "aiNewChat": "新しいチャット",
   "aiNoChats": "まだチャットはありません。",
   "aiConfAddVoice": "口調を追加",
   "aiConfApprove": "書き込みごとに確認",
   "aiConfApproveWhy": "ファイルを書く前にアシスタントが確認します。",
+  "aiConfBaseURL": "接続先 URL",
+  "aiConfBaseURLWhy": "空ならそのプロトコル本来のサービスに問い合わせます。",
   "aiConfBash": "コマンドを許可",
   "aiConfBashWhy": "シェルコマンドを実行できます。実行のたびに確認します。",
+  "aiConfDrop": "このモデルを外す",
   "aiConfExtra": "追加の指示",
   "aiConfExtraWhy": "どの口調でも、すべてのプロンプトに加えます。",
+  "aiConfFetch": "モデルを取得",
+  "aiConfFetched": "{count, plural, other {# 個のモデル}}",
+  "aiConfFetching": "取得中…",
+  "aiConfFilter": "絞り込み",
   "aiConfKey": "API キー",
   "@aiConfKeyKept": {
     "placeholders": {
@@ -44,9 +52,16 @@
   "aiConfKeyKept": "{provider} のキーは保存済みです。",
   "aiConfKeyPlaceholder": "sk-…",
   "aiConfKeyWhy": "ai-keys.json に保存し、アカウントとは同期しません。",
-  "aiConfModel": "モデル",
-  "aiConfNoProvider": "先にプロバイダーを選んでください。",
-  "aiConfProvider": "プロバイダー",
+  "aiConfKeep": "このモデルを残す",
+  "aiConfModels": "モデル",
+  "aiConfModelsWhy": "必要なモデルを残し、答えるものをクリックします。",
+  "aiConfMore": "{count, plural, other {ほか # 件: 入力で絞り込めます}}",
+  "aiConfNoModel": "先にモデルを残してください。",
+  "aiConfNoModels": "まだ取得していません。",
+  "aiConfNoProtocol": "先にプロトコルを選んでください。",
+  "aiConfProtocol": "プロトコル",
+  "aiConfProtocolAnthropic": "Anthropic 互換",
+  "aiConfProtocolOpenAI": "OpenAI 互換",
   "aiConfRemove": "この口調を削除",
   "aiConfTitle": "AI 設定",
   "aiConfVoiceName": "名前",
@@ -70,12 +85,6 @@
     }
   },
   "aiToolRan": "{tools} を実行",
-  "@aiUnknownModel": {
-    "placeholders": {
-      "model": {}
-    }
-  },
-  "aiUnknownModel": "{model} はアシスタントが知らないモデルです。",
   "aiYou": "あなた",
   "alertCaution": "注意",
   "alertImportant": "重要",

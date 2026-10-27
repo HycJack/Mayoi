@@ -26,15 +26,23 @@
     }
   },
   "aiNoKeyFor": "请在 ai-keys.json 里为 {provider} 添加 API key：设置里指定的是它。",
+  "aiNoModel": "请先在 AI 设置里选一个模型。",
   "aiNewChat": "新对话",
   "aiNoChats": "还没有对话。",
   "aiConfAddVoice": "新增语气",
   "aiConfApprove": "写入前逐次确认",
   "aiConfApproveWhy": "写文件前先向你确认。",
+  "aiConfBaseURL": "接口地址",
+  "aiConfBaseURLWhy": "留空则用该协议的官方地址。",
   "aiConfBash": "允许执行命令",
   "aiConfBashWhy": "可以运行 shell 命令，每次都要确认。",
+  "aiConfDrop": "不再保留这个模型",
   "aiConfExtra": "附加指令",
   "aiConfExtraWhy": "无论哪种语气，都加进每次对话。",
+  "aiConfFetch": "获取模型",
+  "aiConfFetched": "{count, plural, other {# 个模型}}",
+  "aiConfFetching": "获取中…",
+  "aiConfFilter": "筛选",
   "aiConfKey": "API 密钥",
   "@aiConfKeyKept": {
     "placeholders": {
@@ -44,9 +52,16 @@
   "aiConfKeyKept": "{provider} 的密钥已保存。",
   "aiConfKeyPlaceholder": "sk-…",
   "aiConfKeyWhy": "保存在 ai-keys.json，不同步到账号。",
-  "aiConfModel": "模型",
-  "aiConfNoProvider": "请先选择服务商。",
-  "aiConfProvider": "服务商",
+  "aiConfKeep": "保留这个模型",
+  "aiConfModels": "模型",
+  "aiConfModelsWhy": "勾选需要的模型，再点一下用来回答的那个。",
+  "aiConfMore": "{count, plural, other {还有 # 个：输入可缩小范围}}",
+  "aiConfNoModel": "请先保留一个模型。",
+  "aiConfNoModels": "还没有获取模型。",
+  "aiConfNoProtocol": "请先选择协议。",
+  "aiConfProtocol": "协议",
+  "aiConfProtocolAnthropic": "Anthropic 兼容",
+  "aiConfProtocolOpenAI": "OpenAI 兼容",
   "aiConfRemove": "删除这个语气",
   "aiConfTitle": "AI 设置",
   "aiConfVoiceName": "名称",
@@ -70,12 +85,6 @@
     }
   },
   "aiToolRan": "运行了 {tools}",
-  "@aiUnknownModel": {
-    "placeholders": {
-      "model": {}
-    }
-  },
-  "aiUnknownModel": "助手不认识 {model} 这个模型。",
   "aiYou": "你",
   "alertCaution": "小心",
   "alertImportant": "重要",

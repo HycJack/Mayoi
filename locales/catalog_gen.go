@@ -426,6 +426,16 @@ func (msgs Messages) AiNoKeyFor(provider string) string {
 	return Catalog.Format(msgs.locale, "aiNoKeyFor", map[string]any{"provider": provider})
 }
 
+// AiNoModel says "Choose a model in AI Settings before asking anything."
+// in the language the app shows.
+func AiNoModel() string { return In(i18n.Locale()).AiNoModel() }
+
+// AiNoModel says "Choose a model in AI Settings before asking anything."
+// in the language of msgs.
+func (msgs Messages) AiNoModel() string {
+	return Catalog.Format(msgs.locale, "aiNoModel", nil)
+}
+
 // AiNewChat says "New Chat"
 // in the language the app shows.
 func AiNewChat() string { return In(i18n.Locale()).AiNewChat() }
@@ -476,6 +486,26 @@ func (msgs Messages) AiConfApproveWhy() string {
 	return Catalog.Format(msgs.locale, "aiConfApproveWhy", nil)
 }
 
+// AiConfBaseURL says "Base URL"
+// in the language the app shows.
+func AiConfBaseURL() string { return In(i18n.Locale()).AiConfBaseURL() }
+
+// AiConfBaseURL says "Base URL"
+// in the language of msgs.
+func (msgs Messages) AiConfBaseURL() string {
+	return Catalog.Format(msgs.locale, "aiConfBaseURL", nil)
+}
+
+// AiConfBaseURLWhy says "Empty asks the protocol's own service."
+// in the language the app shows.
+func AiConfBaseURLWhy() string { return In(i18n.Locale()).AiConfBaseURLWhy() }
+
+// AiConfBaseURLWhy says "Empty asks the protocol's own service."
+// in the language of msgs.
+func (msgs Messages) AiConfBaseURLWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfBaseURLWhy", nil)
+}
+
 // AiConfBash says "Allow commands"
 // in the language the app shows.
 func AiConfBash() string { return In(i18n.Locale()).AiConfBash() }
@@ -496,6 +526,16 @@ func (msgs Messages) AiConfBashWhy() string {
 	return Catalog.Format(msgs.locale, "aiConfBashWhy", nil)
 }
 
+// AiConfDrop says "Drop this model"
+// in the language the app shows.
+func AiConfDrop() string { return In(i18n.Locale()).AiConfDrop() }
+
+// AiConfDrop says "Drop this model"
+// in the language of msgs.
+func (msgs Messages) AiConfDrop() string {
+	return Catalog.Format(msgs.locale, "aiConfDrop", nil)
+}
+
 // AiConfExtra says "Extra instructions"
 // in the language the app shows.
 func AiConfExtra() string { return In(i18n.Locale()).AiConfExtra() }
@@ -514,6 +554,46 @@ func AiConfExtraWhy() string { return In(i18n.Locale()).AiConfExtraWhy() }
 // in the language of msgs.
 func (msgs Messages) AiConfExtraWhy() string {
 	return Catalog.Format(msgs.locale, "aiConfExtraWhy", nil)
+}
+
+// AiConfFetch says "Fetch models"
+// in the language the app shows.
+func AiConfFetch() string { return In(i18n.Locale()).AiConfFetch() }
+
+// AiConfFetch says "Fetch models"
+// in the language of msgs.
+func (msgs Messages) AiConfFetch() string {
+	return Catalog.Format(msgs.locale, "aiConfFetch", nil)
+}
+
+// AiConfFetched says "{count, plural, one {# model} other {# models}}"
+// in the language the app shows.
+func AiConfFetched(count int) string { return In(i18n.Locale()).AiConfFetched(count) }
+
+// AiConfFetched says "{count, plural, one {# model} other {# models}}"
+// in the language of msgs.
+func (msgs Messages) AiConfFetched(count int) string {
+	return Catalog.Format(msgs.locale, "aiConfFetched", map[string]any{"count": count})
+}
+
+// AiConfFetching says "Fetching…"
+// in the language the app shows.
+func AiConfFetching() string { return In(i18n.Locale()).AiConfFetching() }
+
+// AiConfFetching says "Fetching…"
+// in the language of msgs.
+func (msgs Messages) AiConfFetching() string {
+	return Catalog.Format(msgs.locale, "aiConfFetching", nil)
+}
+
+// AiConfFilter says "Filter"
+// in the language the app shows.
+func AiConfFilter() string { return In(i18n.Locale()).AiConfFilter() }
+
+// AiConfFilter says "Filter"
+// in the language of msgs.
+func (msgs Messages) AiConfFilter() string {
+	return Catalog.Format(msgs.locale, "aiConfFilter", nil)
 }
 
 // AiConfKey says "API key"
@@ -556,34 +636,104 @@ func (msgs Messages) AiConfKeyWhy() string {
 	return Catalog.Format(msgs.locale, "aiConfKeyWhy", nil)
 }
 
-// AiConfModel says "Model"
+// AiConfKeep says "Keep this model"
 // in the language the app shows.
-func AiConfModel() string { return In(i18n.Locale()).AiConfModel() }
+func AiConfKeep() string { return In(i18n.Locale()).AiConfKeep() }
 
-// AiConfModel says "Model"
+// AiConfKeep says "Keep this model"
 // in the language of msgs.
-func (msgs Messages) AiConfModel() string {
-	return Catalog.Format(msgs.locale, "aiConfModel", nil)
+func (msgs Messages) AiConfKeep() string {
+	return Catalog.Format(msgs.locale, "aiConfKeep", nil)
 }
 
-// AiConfNoProvider says "Choose a provider first."
+// AiConfModels says "Models"
 // in the language the app shows.
-func AiConfNoProvider() string { return In(i18n.Locale()).AiConfNoProvider() }
+func AiConfModels() string { return In(i18n.Locale()).AiConfModels() }
 
-// AiConfNoProvider says "Choose a provider first."
+// AiConfModels says "Models"
 // in the language of msgs.
-func (msgs Messages) AiConfNoProvider() string {
-	return Catalog.Format(msgs.locale, "aiConfNoProvider", nil)
+func (msgs Messages) AiConfModels() string {
+	return Catalog.Format(msgs.locale, "aiConfModels", nil)
 }
 
-// AiConfProvider says "Provider"
+// AiConfModelsWhy says "Keep what you need, then click the one that answers."
 // in the language the app shows.
-func AiConfProvider() string { return In(i18n.Locale()).AiConfProvider() }
+func AiConfModelsWhy() string { return In(i18n.Locale()).AiConfModelsWhy() }
 
-// AiConfProvider says "Provider"
+// AiConfModelsWhy says "Keep what you need, then click the one that answers."
 // in the language of msgs.
-func (msgs Messages) AiConfProvider() string {
-	return Catalog.Format(msgs.locale, "aiConfProvider", nil)
+func (msgs Messages) AiConfModelsWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfModelsWhy", nil)
+}
+
+// AiConfMore says "{count, plural, one {# more: type to narrow the list} other {# more: type to narrow the list}}"
+// in the language the app shows.
+func AiConfMore(count int) string { return In(i18n.Locale()).AiConfMore(count) }
+
+// AiConfMore says "{count, plural, one {# more: type to narrow the list} other {# more: type to narrow the list}}"
+// in the language of msgs.
+func (msgs Messages) AiConfMore(count int) string {
+	return Catalog.Format(msgs.locale, "aiConfMore", map[string]any{"count": count})
+}
+
+// AiConfNoModel says "Keep a model first."
+// in the language the app shows.
+func AiConfNoModel() string { return In(i18n.Locale()).AiConfNoModel() }
+
+// AiConfNoModel says "Keep a model first."
+// in the language of msgs.
+func (msgs Messages) AiConfNoModel() string {
+	return Catalog.Format(msgs.locale, "aiConfNoModel", nil)
+}
+
+// AiConfNoModels says "Nothing fetched yet."
+// in the language the app shows.
+func AiConfNoModels() string { return In(i18n.Locale()).AiConfNoModels() }
+
+// AiConfNoModels says "Nothing fetched yet."
+// in the language of msgs.
+func (msgs Messages) AiConfNoModels() string {
+	return Catalog.Format(msgs.locale, "aiConfNoModels", nil)
+}
+
+// AiConfNoProtocol says "Choose a protocol first."
+// in the language the app shows.
+func AiConfNoProtocol() string { return In(i18n.Locale()).AiConfNoProtocol() }
+
+// AiConfNoProtocol says "Choose a protocol first."
+// in the language of msgs.
+func (msgs Messages) AiConfNoProtocol() string {
+	return Catalog.Format(msgs.locale, "aiConfNoProtocol", nil)
+}
+
+// AiConfProtocol says "Protocol"
+// in the language the app shows.
+func AiConfProtocol() string { return In(i18n.Locale()).AiConfProtocol() }
+
+// AiConfProtocol says "Protocol"
+// in the language of msgs.
+func (msgs Messages) AiConfProtocol() string {
+	return Catalog.Format(msgs.locale, "aiConfProtocol", nil)
+}
+
+// AiConfProtocolAnthropic says "Anthropic-compatible"
+// in the language the app shows.
+func AiConfProtocolAnthropic() string { return In(i18n.Locale()).AiConfProtocolAnthropic() }
+
+// AiConfProtocolAnthropic says "Anthropic-compatible"
+// in the language of msgs.
+func (msgs Messages) AiConfProtocolAnthropic() string {
+	return Catalog.Format(msgs.locale, "aiConfProtocolAnthropic", nil)
+}
+
+// AiConfProtocolOpenAI says "OpenAI-compatible"
+// in the language the app shows.
+func AiConfProtocolOpenAI() string { return In(i18n.Locale()).AiConfProtocolOpenAI() }
+
+// AiConfProtocolOpenAI says "OpenAI-compatible"
+// in the language of msgs.
+func (msgs Messages) AiConfProtocolOpenAI() string {
+	return Catalog.Format(msgs.locale, "aiConfProtocolOpenAI", nil)
 }
 
 // AiConfRemove says "Remove this voice"
@@ -764,16 +914,6 @@ func AiToolRan(tools string) string { return In(i18n.Locale()).AiToolRan(tools) 
 // in the language of msgs.
 func (msgs Messages) AiToolRan(tools string) string {
 	return Catalog.Format(msgs.locale, "aiToolRan", map[string]any{"tools": tools})
-}
-
-// AiUnknownModel says "{model} is not a model the assistant knows."
-// in the language the app shows.
-func AiUnknownModel(model string) string { return In(i18n.Locale()).AiUnknownModel(model) }
-
-// AiUnknownModel says "{model} is not a model the assistant knows."
-// in the language of msgs.
-func (msgs Messages) AiUnknownModel(model string) string {
-	return Catalog.Format(msgs.locale, "aiUnknownModel", map[string]any{"model": model})
 }
 
 // AiYou says "You"
