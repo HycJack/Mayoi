@@ -53,7 +53,10 @@ func Loop(ctx context.Context, r Run, onStep func(Step)) ([]core.Message, error)
 		Messages:     r.Messages,
 		Tools:        r.Tools,
 		StreamFn:     r.Stream,
-		GetApiKey:    func() string { return r.APIKey },
+		// One tool at a time: a card is answered one at a time, and two
+		// writes at once would ask for two answers to one card.
+		ToolExecution: core.ToolExecSequential,
+		GetApiKey:     func() string { return r.APIKey },
 		ShouldStopAfterTurn: func(core.AssistantMessage, []core.ToolResultMessage) bool {
 			mu.Lock()
 			defer mu.Unlock()

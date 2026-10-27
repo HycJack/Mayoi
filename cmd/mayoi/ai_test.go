@@ -618,7 +618,7 @@ func TestTheVoiceIsChosenFromTheList(t *testing.T) {
 	a := hs.a
 	a.toggleAI()
 	hs.settle()
-	if err := hs.tt.Click(locales.AiPersonaTitle()); err != nil {
+	if err := hs.tt.Click(locales.AiPersonaButton()); err != nil {
 		t.Fatal(err)
 	}
 	hs.settle()
@@ -633,7 +633,7 @@ func TestTheVoiceIsChosenFromTheList(t *testing.T) {
 		t.Errorf("the voice is %q, list open %v", a.window.AIPersona, a.ai.menu)
 	}
 	// And back to the assistant's own.
-	if err := hs.tt.Click(locales.AiPersonaTitle()); err != nil {
+	if err := hs.tt.Click(locales.AiPersonaButton()); err != nil {
 		t.Fatal(err)
 	}
 	hs.settle()
@@ -643,5 +643,51 @@ func TestTheVoiceIsChosenFromTheList(t *testing.T) {
 	hs.settle()
 	if a.window.AIPersona != "" {
 		t.Errorf("the voice is %q", a.window.AIPersona)
+	}
+}
+
+func TestTheCardShowsTheLinesThatChanged(t *testing.T) {
+	got := changedLines([]byte("one\ntwo\nthree\n"), []byte("one\nTWO\nthree\n"))
+	if got != "- two\n+ TWO" {
+		t.Errorf("the change is %q", got)
+	}
+	// A new file has no old lines, and an empty one has no line at all.
+	if got := changedLines(nil, []byte("hi\n")); got != "+ hi" {
+		t.Errorf("a new file is %q", got)
+	}
+	if got := changedLines(nil, nil); got != "" {
+		t.Errorf("an empty change is %q", got)
+	}
+}
+
+func TestOneListShowsAtATime(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.toggleAI()
+	hs.settle()
+	if err := hs.tt.Click(locales.AiChats()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if !a.ai.chats {
+		t.Fatal("the chats did not open")
+	}
+	// A list over the panel covers its buttons: the other one is opened
+	// once this one is closed, or by its command.
+	a.post(func() { a.toggleChats() })
+	hs.settle()
+	if err := hs.tt.Click(locales.AiPersonaButton()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if a.ai.chats || !a.ai.menu {
+		t.Errorf("chats open %v, voices open %v", a.ai.chats, a.ai.menu)
+	}
+	// The other list closes the first when it opens, from its command.
+	a.post(func() { a.togglePersonas() })
+	a.post(func() { a.toggleChats() })
+	hs.settle()
+	if !a.ai.chats || a.ai.menu {
+		t.Errorf("chats open %v, voices open %v", a.ai.chats, a.ai.menu)
 	}
 }

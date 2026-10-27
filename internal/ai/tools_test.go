@@ -119,7 +119,13 @@ func TestWriteAsksBeforeItWrites(t *testing.T) {
 	if got, err := tools.Write(context.Background(), "call-1", body, nil); err != nil || got.IsError {
 		t.Fatalf("write: %v %+v", err, got)
 	}
-	if len(asked) != 1 || asked[0].Path != filepath.Join(root, "new.txt") || string(asked[0].After) != "hi\n" {
+	// The path comes back with its links resolved, which on Windows is
+	// the long name of a folder the system handed out short.
+	want, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(asked) != 1 || asked[0].Path != filepath.Join(want, "new.txt") || string(asked[0].After) != "hi\n" {
 		t.Errorf("asked %+v", asked)
 	}
 	if data, err := os.ReadFile(filepath.Join(root, "new.txt")); err != nil || string(data) != "hi\n" {
@@ -232,5 +238,48 @@ func TestARejectedCommandRunsNothing(t *testing.T) {
 	}
 	if !strings.Contains(said(t, got), "rejected") {
 		t.Errorf("bash said %+v", got)
+	}
+}
+
+func TestALinkOutOfTheFolderIsRefused(t *testing.T) {
+	root := aFolder(t)
+	outside := t.TempDir()
+	if err := os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("outside\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "link")); err != nil {
+		t.Skipf("links are not made here: %v", err)
+	}
+	tools := &Tools{Root: root}
+	got, err := tools.Read(context.Background(), "call-1", json.RawMessage(`{"path": "link/secret.txt"}`), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.IsError || !strings.Contains(said(t, got), "outside") {
+		t.Errorf("the read said %q", said(t, got))
+	}
+	if _, err := Under(root, "link/secret.txt"); err == nil {
+		t.Error("the path passes the guard")
+	}
+}
+
+func TestADriveRelativePathIsRefused(t *testing.T) {
+	root := aFolder(t)
+	if _, err := Under(root, `C:file.txt`); err == nil {
+		t.Error("a drive's own folder passes the guard")
+	}
+}
+
+func TestAQuotedPathIsThePath(t *testing.T) {
+	root := aFolder(t)
+	if err := os.WriteFile(filepath.Join(root, "a b.txt"), []byte("hi\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Under(root, `"a b.txt"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(got); err != nil {
+		t.Errorf("the quoted path is %q", got)
 	}
 }

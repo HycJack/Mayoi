@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // maxMemory is how much of MAYOI.md the assistant reads.
@@ -171,12 +172,17 @@ func readMemory(root string) string {
 	s := strings.TrimSpace(string(b))
 	// The ellipsis is three bytes, and stays within the cap.
 	if len(s) > maxMemory-len("…") {
-		// Cut on a line, so the model does not read half a sentence as
-		// a whole one.
+		// Cut on a line, and never inside a character: a broken rune
+		// would make the whole prompt unreadable to a model.
 		s = s[:maxMemory-len("…")]
 		if i := strings.LastIndexByte(s, '\n'); i > 0 {
 			s = s[:i]
 		}
+		// A cut at the cap may still land mid-character.
+		for len(s) > 0 && !utf8.ValidString(s) {
+			s = s[:len(s)-1]
+		}
+		s = strings.TrimRight(s, " \t")
 		s += "…"
 	}
 	return s

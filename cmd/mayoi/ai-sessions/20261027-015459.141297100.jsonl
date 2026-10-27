@@ -1,3 +1,0 @@
-{"description":"first question","id":"","sessionId":"20261027-015459.141297100","timestamp":"2026-10-27T01:54:59.1422755Z","type":"session_info"}
-{"id":"","message":{"role":"user","content":"first question","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"user","timestamp":"2026-10-27T01:54:59.1422755Z","type":"message"}
-{"id":"","message":{"role":"assistant","content":[{"type":"text","text":"Sure."}],"api":"","provider":"","model":"","usage":{"input":0,"output":0,"totalTokens":0,"cost":{"input":0,"output":0,"total":0}},"stopReason":"stop","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"assistant","timestamp":"2026-10-27T01:54:59.1422755Z","type":"message"}

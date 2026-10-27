@@ -1,3 +1,0 @@
-{"description":"add new.txt","id":"","sessionId":"20261027-015924.108634100","timestamp":"2026-10-27T01:59:24.1086341Z","type":"session_info"}
-{"id":"","message":{"role":"user","content":"add new.txt","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"user","timestamp":"2026-10-27T01:59:24.1086341Z","type":"message"}
-{"id":"","message":{"role":"assistant","content":[{"type":"text","text":"the user rejected this change"}],"api":"","provider":"","model":"","usage":{"input":0,"output":0,"totalTokens":0,"cost":{"input":0,"output":0,"total":0}},"stopReason":"stop","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"assistant","timestamp":"2026-10-27T01:59:24.1086341Z","type":"message"}

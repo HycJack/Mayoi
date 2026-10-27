@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestTheFivePersonasAreThere(t *testing.T) {
@@ -78,6 +79,22 @@ func TestALongProjectMemoryIsCutShort(t *testing.T) {
 	}
 	if got := len(Memory(dir)); got > maxMemory+len("…") {
 		t.Errorf("the memory is %d bytes", got)
+	}
+}
+
+func TestACutProjectMemoryIsStillText(t *testing.T) {
+	dir := t.TempDir()
+	// Three bytes a character, and no newline near the cap: a cut by
+	// bytes alone lands inside one.
+	if err := os.WriteFile(filepath.Join(dir, "MAYOI.md"), []byte(strings.Repeat("項", maxMemory)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := Memory(dir)
+	if !utf8.ValidString(got) {
+		t.Errorf("the memory is not text: %q…", got[maxMemory-8:])
+	}
+	if len(got) > maxMemory {
+		t.Errorf("the memory is %d bytes", len(got))
 	}
 }
 

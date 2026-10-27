@@ -37,16 +37,6 @@ func (s Sessions) Save(id, title string, msgs []Message) (string, error) {
 		id = newChatID()
 	}
 	path := s.path(id)
-	// The file is written whole: a chat saved again is its new self, not
-	// its old self with more after it.
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return "", err
-	}
-	storage, err := session.NewJSONLStorage(path)
-	if err != nil {
-		return "", err
-	}
-	defer storage.Close()
 	entries := []session.SessionTreeEntry{
 		{Type: session.EntrySessionInfo, SessionID: id, Description: title, Timestamp: time.Now().UTC()},
 	}
@@ -60,7 +50,28 @@ func (s Sessions) Save(id, title string, msgs []Message) (string, error) {
 			Timestamp: time.Now().UTC(),
 		})
 	}
-	if err := storage.Append(entries); err != nil {
+	// The chat is written to a file of its own and moved over the old
+	// one: pi-ai-go's storage appends to a file it finds, which would keep
+	// what the chat no longer says. A crash leaves the old chat, never
+	// half of one.
+	tmp, err := os.CreateTemp(s.Dir, id+".*.tmp")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmp.Name())
+	if err := tmp.Close(); err != nil {
+		return "", err
+	}
+	storage, err := session.NewJSONLStorage(tmp.Name())
+	if err != nil {
+		return "", err
+	}
+	err = storage.Append(entries)
+	storage.Close()
+	if err != nil {
+		return "", err
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
 		return "", err
 	}
 	return id, nil
@@ -84,7 +95,8 @@ func (s Sessions) Load(id string) (Chat, error) {
 	return chat, nil
 }
 
-// List is every chat of the folder, the newest first.
+// List is every chat of the folder, the newest first. A file that cannot
+// be read is left out; a folder of chats that are not chats has none.
 func (s Sessions) List() ([]Chat, error) {
 	files, err := filepath.Glob(filepath.Join(s.Dir, "*.jsonl"))
 	if err != nil {

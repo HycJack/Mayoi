@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -44,6 +43,10 @@ type aiPanel struct {
 	keyed ui.Handle
 	// writing is the answer under way, nil when the assistant is idle.
 	writing *aiReply
+	// runCancel stops the run, writing or unwinding, and runDone says the
+	// goroutine of the run has returned: both nil when nothing runs.
+	runCancel context.CancelFunc
+	runDone   chan struct{}
 	// approval is a write waiting for Approve or Reject, nil when there
 	// is none.
 	approval *aiApproval
@@ -98,17 +101,26 @@ type aiReply struct {
 
 // cancel stops the answer under way. The answer keeps its place in the
 // conversation, marked when it said nothing: a delta still on its way
-// lands there, or nowhere.
+// lands there, or nowhere. A run that a stop already killed still has its
+// context, which this cancels as well, so that nothing of it stays alive.
 func (p *aiPanel) cancel() {
+	if p.runCancel != nil {
+		p.runCancel()
+		p.runCancel = nil
+	}
 	w := p.writing
+	p.writing = nil
 	if w == nil {
 		return
 	}
-	w.cancel()
-	p.writing = nil
 	if w.at < len(p.msgs) && p.msgs[w.at].text == "" {
 		p.msgs[w.at].stopped = true
 	}
+}
+
+// running says a message is being answered, so Stop has something to stop.
+func (p *aiPanel) running() bool {
+	return p.runCancel != nil && p.runDone == nil
 }
 
 // aiSaid is what the panel says of a failure: the one it knows, in the
@@ -173,6 +185,10 @@ func (a *app) send() {
 	ctx, cancel := context.WithCancel(context.Background())
 	w := &aiReply{ctx: ctx, cancel: cancel, at: last}
 	p.writing = w
+	// The run outlives the answer's text: a stop has to reach it while it
+	// unwinds too, and New Chat must not leave it running.
+	done := make(chan struct{})
+	p.runCancel, p.runDone = cancel, done
 	tools := a.aiTools()
 	run := ai.Run{
 		Model:    model,
@@ -185,6 +201,7 @@ func (a *app) send() {
 	loop := a.loop
 	bg.Go(func() {
 		defer recoverCrash()
+		defer close(done)
 		// Only post from here: the panel's state belongs to the main
 		// thread, and the tools read and write the folder from it.
 		msgs, err := loop(ctx, run, func(s ai.Step) {
@@ -204,6 +221,12 @@ func (a *app) send() {
 		stopped := ctx.Err() != nil
 		cancel()
 		a.post(func() {
+			// A stop or a New Chat took the run away from this answer: it
+			// says nothing more, and keeps no chat.
+			if p.runDone != done {
+				return
+			}
+			p.runCancel, p.runDone = nil, nil
 			if p.writing != w {
 				return
 			}
@@ -220,20 +243,25 @@ func (a *app) send() {
 			if wrote := tools.Wrote(); len(wrote) > 0 {
 				a.diskChanged(wrote, nil)
 			}
-			a.keepChat(model, key)
+			// A stopped answer keeps nothing: the chat it belongs to may
+			// already be another one.
+			if !stopped {
+				a.keepChat(model, key)
+			}
 		})
 	})
 	a.invalidate()
 }
 
-// keepChat writes the conversation to the folder's chats, and names it
-// after its first question, cut short.
+// keepChat writes the conversation to the folder's chats. A chat is named
+// after its first question, once, when it is new: a later answer does not
+// rename it.
 func (a *app) keepChat(model piai.Model, key string) {
 	p := &a.ai
 	if len(p.msgs) == 0 {
 		return
 	}
-	if p.title == "" {
+	if p.chat == "" {
 		p.title = aiTitleOf(p.msgs)
 	}
 	sessions := ai.Sessions{Dir: a.settings.SessionsPath()}
@@ -278,6 +306,7 @@ func (a *app) openChat(id string) {
 		return
 	}
 	p.cancel()
+	a.refuseApproval()
 	p.msgs = nil
 	for _, m := range chat.Msgs {
 		p.msgs = append(p.msgs, aiMessage{role: m.Role, text: m.Text})
@@ -290,6 +319,7 @@ func (a *app) openChat(id string) {
 func (a *app) newChat() {
 	p := &a.ai
 	p.cancel()
+	a.refuseApproval()
 	p.msgs, p.chat, p.title, p.chats, p.outOfSteps, p.err = nil, "", "", false, false, ""
 	p.keyed.Focus()
 	a.invalidate()
@@ -364,9 +394,11 @@ func (a *app) aiOpenPath() string {
 	return ""
 }
 
-// togglePersonas opens or closes the list of voices.
+// togglePersonas opens or closes the list of voices. One list shows at a
+// time: the other closes, and the voice chosen does not decide this one.
 func (a *app) togglePersonas() {
 	a.ai.menu = !a.ai.menu
+	a.ai.chats = false
 	a.invalidate()
 }
 
@@ -490,13 +522,15 @@ func told(err error) agent.AgentToolResult {
 }
 
 // askApproval shows the change and waits for Approve or Reject. It runs on
-// a tool's goroutine, so it only posts to the panel.
+// a tool's goroutine, so it only posts to the panel. The card keeps the
+// channel of this call, so a second card replacing it on screen can never
+// answer this one, nor be answered by its rejection.
 func (a *app) askApproval(c ai.Change) bool {
-	reply := make(chan bool, 1)
+	card := &aiApproval{change: c, reply: make(chan bool, 1)}
 	a.post(func() {
-		a.ai.approval = &aiApproval{change: c, reply: reply}
+		a.ai.approval = card
 	})
-	return <-reply
+	return <-card.reply
 }
 
 // answered takes the answer to the card shown, and shows no card after.
@@ -505,9 +539,22 @@ func (a *app) answered(ok bool) {
 	if p.approval == nil {
 		return
 	}
+	// Buffered, and exactly once per card: a card answered twice would
+	// block the frame it is closed in.
 	p.approval.reply <- ok
 	p.approval = nil
 	a.invalidate()
+}
+
+// refuseApproval says no to a card waiting, so that a turn whose window is
+// closing does not wait for an answer nobody will give.
+func (a *app) refuseApproval() {
+	p := &a.ai
+	if p.approval == nil {
+		return
+	}
+	p.approval.reply <- false
+	p.approval = nil
 }
 
 // spoken is the messages of the conversation as the models take them: an
@@ -637,7 +684,7 @@ func (a *app) aiTitleRow(c *ui.Context) {
 		Background(p.chrome).BorderWidth(0, 0, 1, 0).BorderColor(p.border).Children(func() {
 		ui.Text(c, locales.CmdViewAI()).FontSize(11).FontWeight(600).
 			LetterSpacing(titleSpacing).TextColor(p.text).Grow(1).SingleLine()
-		if a.ai.writing != nil && a.iconButton(c, iconStopSquare, locales.AiStop(), false).Clicked() {
+		if a.ai.running() && a.iconButton(c, iconStopSquare, locales.AiStop(), false).Clicked() {
 			a.stopAI()
 		}
 		if a.iconButton(c, iconPlus, locales.AiNewChat(), false).Clicked() {
@@ -646,23 +693,23 @@ func (a *app) aiTitleRow(c *ui.Context) {
 		if a.iconButton(c, iconListTree, locales.AiChats(), false).Clicked() {
 			a.post(a.toggleChats)
 		}
-		if a.iconButton(c, iconSparkles, locales.AiPersonaTitle(), false).Clicked() {
+		if a.iconButton(c, iconSparkles, locales.AiPersonaButton(), false).Clicked() {
 			a.post(a.togglePersonas)
 		}
 	})
 }
 
 // toggleChats opens or closes the list of conversations, reading the
-// folder's own when it opens.
+// folder's own when it opens. One list shows at a time: the other closes.
 func (a *app) toggleChats() {
 	p := &a.ai
 	p.chats = !p.chats
+	p.menu = false
 	p.listed = nil
+	a.invalidate()
 	if !p.chats {
-		a.invalidate()
 		return
 	}
-	a.invalidate()
 	bg.Go(func() {
 		defer recoverCrash()
 		a.readChats()
@@ -810,25 +857,39 @@ func (a *app) aiApprovalCard(c *ui.Context) {
 }
 
 // changedLines are the lines a change adds or removes, signed, at most 80
-// of them.
+// of them. The lines are compared in place, so that a line that stayed
+// where it was is neither added nor removed, and an empty file has no
+// lines at all.
 func changedLines(before, after []byte) string {
-	old := strings.Split(strings.TrimSuffix(string(before), "\n"), "\n")
-	new := strings.Split(strings.TrimSuffix(string(after), "\n"), "\n")
-	var out []string
-	for _, line := range new {
-		if !slices.Contains(old, line) {
-			out = append(out, "+ "+line)
-		}
+	old, new := linesOf(before), linesOf(after)
+	// The shared start and end are not the change.
+	for len(old) > 0 && len(new) > 0 && old[0] == new[0] {
+		old, new = old[1:], new[1:]
 	}
+	for len(old) > 0 && len(new) > 0 && old[len(old)-1] == new[len(new)-1] {
+		old, new = old[:len(old)-1], new[:len(new)-1]
+	}
+	// What is left is one block: the old lines go, the new ones come.
+	var out []string
 	for _, line := range old {
-		if !slices.Contains(new, line) {
-			out = append(out, "- "+line)
-		}
+		out = append(out, "- "+line)
+	}
+	for _, line := range new {
+		out = append(out, "+ "+line)
 	}
 	if len(out) > 80 {
 		out = append(out[:80], "…")
 	}
 	return strings.Join(out, "\n")
+}
+
+// splitLines is the lines of a file, none for an empty one.
+func linesOf(b []byte) []string {
+	s := strings.TrimSuffix(string(b), "\n")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, "\n")
 }
 
 // aiCompose is the field what is asked is typed in.
@@ -839,11 +900,14 @@ func (a *app) aiCompose(c *ui.Context) {
 		Background(p.editor).BorderWidth(1, 0, 0, 0).BorderColor(p.border).Transition(fieldFocus)
 	field.Children(func() {
 		placeholder := locales.AiPlaceholder()
+		// A list over the panel has the keyboard: what is typed is not a
+		// question, and Escape closes the list.
+		veiled := ai.chats || ai.menu
 		in := a.textKeys(ui.TextInputBase(c.Key("ai-input"), &ai.prompt)).Grow(1).MinWidth(0).
-			FontSize(12.5).Placeholder(placeholder).Label(placeholder)
+			FontSize(12.5).Placeholder(placeholder).Label(placeholder).Disabled(veiled)
 		in.Bind(&ai.keyed)
 		// Escape stops the answer under way, as Enter starts one.
-		if ai.writing != nil && in.Shortcut(0, ui.KeyEscape) {
+		if ai.running() && in.Shortcut(0, ui.KeyEscape) {
 			a.post(a.stopAI)
 		}
 		if in.Submitted() {

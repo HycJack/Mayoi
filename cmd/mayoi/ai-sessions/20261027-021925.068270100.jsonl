@@ -1,3 +1,0 @@
-{"description":"add new.txt","id":"","sessionId":"20261027-021925.068270100","timestamp":"2026-10-27T02:19:25.0682701Z","type":"session_info"}
-{"id":"","message":{"role":"user","content":"add new.txt","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"user","timestamp":"2026-10-27T02:19:25.0682701Z","type":"message"}
-{"id":"","message":{"role":"assistant","content":[{"type":"text","text":"wrote new.txt"}],"api":"","provider":"","model":"","usage":{"input":0,"output":0,"totalTokens":0,"cost":{"input":0,"output":0,"total":0}},"stopReason":"stop","timestamp":"0001-01-01T00:00:00Z"},"messageRole":"assistant","timestamp":"2026-10-27T02:19:25.0682701Z","type":"message"}

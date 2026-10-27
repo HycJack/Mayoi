@@ -631,6 +631,9 @@ func (a *app) shutdown() {
 		a.tree.Close()
 	}
 	a.ai.cancel()
+	// A card nobody can answer any more would hold its tool's goroutine,
+	// and the turn with it, for good.
+	a.refuseApproval()
 	a.detachRemote()
 	a.closeRemotePicker()
 }

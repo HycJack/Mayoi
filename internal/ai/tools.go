@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -116,13 +117,15 @@ type EditParams struct {
 	New  string `json:"new"`
 }
 
+// maxFile is the biggest file a read takes, in bytes.
+const maxFile = 8 << 20
+
 // ReadParams is what read is asked: the file, and the lines of it.
 type ReadParams struct {
 	Path   string `json:"path"`
 	Offset int    `json:"offset,omitempty"`
 	Limit  int    `json:"limit,omitempty"`
 }
-
 // GlobParams is what glob is asked: the pattern of the files' paths.
 type GlobParams struct {
 	Pattern string `json:"pattern"`
@@ -134,27 +137,87 @@ type GrepParams struct {
 	Include string `json:"include,omitempty"`
 }
 
-// Under is the path of p in root, and fails when it is outside it.
+// Under is the path of p in root, and fails when it is outside it, or when
+// it reaches outside it through a link.
 func Under(root, p string) (string, error) {
 	if root == "" {
 		return "", errors.New("no folder is open")
+	}
+	// A path a model read from somewhere may arrive as a quoted string.
+	if unquoted, err := strconv.Unquote(p); err == nil {
+		p = unquoted
 	}
 	full := p
 	if !startsAtARoot(full) {
 		full = filepath.Join(root, filepath.FromSlash(p))
 	}
 	full = filepath.Clean(full)
-	rel, err := filepath.Rel(root, full)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if !inside(root, full) {
 		return "", fmt.Errorf("%s is outside the folder", p)
 	}
-	return full, nil
+	// A link inside the folder can point out of it, and writing through
+	// one writes outside. Both sides resolve: on a Mac the folder itself
+	// is often reached through a link, as /tmp is one.
+	real, err := realPath(root, full)
+	if err != nil {
+		return "", err
+	}
+	realRoot, err := realPath(root, filepath.Clean(root))
+	if err != nil {
+		return "", err
+	}
+	if !inside(realRoot, real) {
+		return "", fmt.Errorf("%s leads outside the folder", p)
+	}
+	return real, nil
+}
+
+// inside says dir holds full.
+func inside(dir, full string) bool {
+	d, err := filepath.Abs(dir)
+	if err != nil {
+		d = dir
+	}
+	rel, err := filepath.Rel(filepath.Clean(d), full)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// realPath is full with its links resolved, and with those of the deepest
+// folder that exists: a file to be written has none yet.
+func realPath(root, full string) (string, error) {
+	if real, err := filepath.EvalSymlinks(full); err == nil {
+		return real, nil
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+	var rest []string
+	for dir := full; ; dir = filepath.Dir(dir) {
+		real, err := filepath.EvalSymlinks(dir)
+		if err == nil {
+			for i := len(rest) - 1; i >= 0; i-- {
+				real = filepath.Join(real, rest[i])
+			}
+			return real, nil
+		}
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		if parent := filepath.Dir(dir); parent == dir {
+			return full, nil
+		}
+		rest = append(rest, filepath.Base(dir))
+	}
 }
 
 // startsAtARoot says the path begins at a root of the system, absolute,
-// or a slash either way: a folder cannot hold any of those as a name.
+// a slash either way or a drive's own: a folder cannot hold any of those
+// as a name.
 func startsAtARoot(p string) bool {
-	return filepath.IsAbs(p) || strings.HasPrefix(p, "/") || strings.HasPrefix(p, `\`)
+	if filepath.IsAbs(p) || strings.HasPrefix(p, "/") || strings.HasPrefix(p, `\`) {
+		return true
+	}
+	// "C:file" is not absolute: it is file in that drive's own folder.
+	return len(p) >= 2 && p[1] == ':' && ((p[0] >= 'a' && p[0] <= 'z') || (p[0] >= 'A' && p[0] <= 'Z'))
 }
 
 // text is a result the model reads.
@@ -179,6 +242,12 @@ func (t *Tools) Read(ctx context.Context, id string, params json.RawMessage, onU
 	full, err := Under(t.Root, p.Path)
 	if err != nil {
 		return failure(err), nil
+	}
+	// A file too big for a model to read is not read at all, rather than
+	// filling the machine's memory first.
+	if info, err := vfs.Stat(full); err == nil && info.Size() > maxFile {
+		return failure(fmt.Errorf("%s is %d bytes, more than the %d a read takes: use offset and limit",
+			p.Path, info.Size(), maxFile)), nil
 	}
 	data, err := vfs.ReadFile(full)
 	if err != nil {

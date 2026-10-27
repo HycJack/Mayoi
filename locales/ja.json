@@ -28,6 +28,7 @@
   "aiNoKeyFor": "ai-keys.json に {provider} の API key を追加してください。設定が指定しています。",
   "aiNewChat": "新しいチャット",
   "aiNoChats": "まだチャットはありません。",
+  "aiPersonaButton": "口調を選ぶ",
   "aiPersonaOwn": "アシスタント",
   "aiPersonaOwnWhy": "Mayoi 自身の口調で、このフォルダーの手助けをします。",
   "aiPersonaTitle": "口調",

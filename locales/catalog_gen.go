@@ -415,6 +415,16 @@ func (msgs Messages) AiNoChats() string {
 	return Catalog.Format(msgs.locale, "aiNoChats", nil)
 }
 
+// AiPersonaButton says "Choose the voice"
+// in the language the app shows.
+func AiPersonaButton() string { return In(i18n.Locale()).AiPersonaButton() }
+
+// AiPersonaButton says "Choose the voice"
+// in the language of msgs.
+func (msgs Messages) AiPersonaButton() string {
+	return Catalog.Format(msgs.locale, "aiPersonaButton", nil)
+}
+
 // AiPersonaOwn says "The assistant"
 // in the language the app shows.
 func AiPersonaOwn() string { return In(i18n.Locale()).AiPersonaOwn() }

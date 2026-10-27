@@ -1,4 +1,4 @@
-/build/
+﻿/build/
 /.mygo/
 mygo_windows_*.syso
 /mayoi
@@ -9,3 +9,6 @@ mygo_windows_*.syso
 /.qoder/worktrees/
 
 .superpowers/
+
+# The assistant's chats, which a test keeps in the tree unless it says otherwise.
+/cmd/mayoi/ai-sessions/

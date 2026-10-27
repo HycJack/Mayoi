@@ -271,6 +271,7 @@
   "aiNoKeyFor": "Add an API key for {provider} to ai-keys.json: the settings name it.",
   "aiNewChat": "New Chat",
   "aiNoChats": "No chats yet.",
+  "aiPersonaButton": "Choose the voice",
   "aiPersonaOwn": "The assistant",
   "aiPersonaOwnWhy": "Mayoi's own voice, asked to help with this folder.",
   "aiPersonaTitle": "Voice",

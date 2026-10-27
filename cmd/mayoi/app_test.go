@@ -166,6 +166,9 @@ type harness struct {
 func newHarness(t testing.TB, dark bool) *harness {
 	root := workspaceFixture(t)
 	s := settings.Default()
+	// A test's chats go in its own folder: the suite must not write into
+	// the tree, nor read what another test wrote.
+	s.SessionsDir = filepath.Join(t.TempDir(), "ai-sessions")
 	w := s.NewWindow()
 	w.Folder = root
 	h := &fakeHost{folder: root}
@@ -173,7 +176,7 @@ func newHarness(t testing.TB, dark bool) *harness {
 	t.Cleanup(a.shutdown)
 	tt := ui.NewTester(a.view, 1200, 760)
 	tt.SetDark(dark)
-	hs := &harness{t: t, a: a, h: h, tt: tt, root: root}
+	hs := &harness{t: t, a: a, h: h, tt: tt, root: root, chats: s.SessionsDir}
 	hs.settle()
 	return hs
 }
