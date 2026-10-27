@@ -276,6 +276,10 @@ func settingsPath() string {
 func main() {
 	mygo.App.SetName("Mayoi")
 	keyRepeat()
+	// The terminal's native library travels inside Mayoi, so that the
+	// executable works where it stands alone: put it where MyGo looks
+	// before anything starts a terminal.
+	unpackNative()
 	// MAYOI_DATA_DIR keeps the settings and window state elsewhere, such as
 	// scripts/dev.sh's Mayoi-dev, so a development app leaves Mayoi's alone.
 	if dir := os.Getenv("MAYOI_DATA_DIR"); dir != "" {

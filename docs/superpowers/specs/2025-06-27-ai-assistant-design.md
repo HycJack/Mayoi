@@ -117,7 +117,8 @@ replace github.com/HycJack/pi-ai-go => ../../pi-ai-go
 | `internal/ai`（审批机制） | 写操作 approve/reject、拒绝结果回给模型、审批后开 AI diff 标签页 | `tools/*` 的 read-before-edit 与审批策略、`docs/agent-and-conversation-design.md` §2.2 |
 | `internal/ai`（自动标题） | 首轮后小模型生成标题、失败取首句前 40 字 | `chatStore.ts` 的会话标题逻辑 |
 | 会话历史 | 多会话列表 + 持久化（实现改用 pi-ai-go 的 session JSONL） | `chatStore.ts` + `internal/store` |
-| 不搬 | PTY 终端、CodeMirror、LSP、文件树/grep/Git、React 组件库 | Mayoi 已有或更强，见对比结论 |
+| 不搬 | PTY 终端、CodeMirror、文件树/grep/Git、React 组件库 | Mayoi 已有或更强，见对比结论 |
+| 不搬（未做，非“已有”） | LSP | Mayoi 本身没有 LSP（其 `ROADMAP.md` 里 “Language servers” 仍未勾选）。terax-clone 的 `internal/lsp` 只是进程与消息框架（Content-Length 分帧、spawn、读回事件，约 400 行），真正语义在前端 TS。若要移植，是一个独立里程碑：服务端管理 + 文档同步 + 诊断/悬停/补全/跳转，与本 AI 助手无关 |
 
 运行链路参考：terax-clone `docs/agent-and-conversation-design.md`（24 步上限、
 工具系统分组、上下文压缩均出自该文档，与 pi-ai-go 能力一一对应）。

@@ -32,6 +32,9 @@ func TestMain(m *testing.M) {
 	// The previews' pictures of the web are not fetched, but by the tests
 	// of them, from servers of their own.
 	markdownRemote.get = func(string) ([]byte, error) { return nil, errors.New("offline") }
+	// As main does: a terminal in a test finds the library built into
+	// Mayoi, rather than none at all, so the tests run what the app does.
+	unpackNative()
 	os.Exit(m.Run())
 }
 

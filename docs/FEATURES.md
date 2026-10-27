@@ -388,7 +388,9 @@ search match opens with the match selected.
 
 ## Terminal
 
-Ghostty's emulator (libghostty-vt), in the panel or in a column tab. The panel is below the editors; **View → Panel
+Ghostty's emulator (libghostty-vt), in the panel or in a column tab. Its native library is built into
+`Mayoi.exe` and unpacked to the user's cache on first start, so a copy of the executable on its own still opens a
+terminal; a library beside it, or the one `MYGO_GHOSTTY_VT` names, is used instead. The panel is below the editors; **View → Panel
 Position**, the command palette's **Move Panel to Left**, **Right** and **Bottom**, and `keybindings.json`'s
 `workbench.action.positionPanelLeft` and its neighbours, and **Panel Position** in the menu of the panel's header, put
 it at a side of the window. There it sits past the sidebar,

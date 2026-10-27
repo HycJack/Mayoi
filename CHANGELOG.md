@@ -5,6 +5,7 @@ needs a `## <version>` section here, or its build fails.
 
 ## Unreleased
 
+- The terminal's native library is built into `Mayoi.exe`, so the file copied on its own still opens a terminal.
 - The **AI Assistant** panel sits at the right of the window: **View → AI Assistant**, or `Alt+CmdOrCtrl+A`.
 - Ask about the code of the folder; the answer streams in, and **Stop** or `Esc` ends it.
 - The assistant reads, searches and edits the folder, and opens the file it explains at its line.
