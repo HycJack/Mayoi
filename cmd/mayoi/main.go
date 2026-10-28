@@ -266,8 +266,11 @@ func (h *desktop) do(fn func()) {
 
 // settingsPath is where the settings are kept.
 func settingsPath() string {
-	dir, err := mygo.App.Path(mygo.PathUserData)
-	if err != nil {
+	dir := dataDirChosen
+	if dir == "" {
+		dir, _ = mygo.App.Path(mygo.PathUserData)
+	}
+	if dir == "" {
 		return ""
 	}
 	return filepath.Join(dir, "settings.json")
@@ -284,6 +287,11 @@ func main() {
 	// scripts/dev.sh's Mayoi-dev, so a development app leaves Mayoi's alone.
 	if dir := os.Getenv("MAYOI_DATA_DIR"); dir != "" {
 		mygo.App.SetPath(mygo.PathUserData, dir)
+		dataDirChosen = dir
+	} else {
+		// The folder Mayoi keeps its files in: the system's, or the one
+		// beside the executable where a machine refuses writes to it.
+		keepDataDir()
 	}
 	// Started as the mayoi command, Mayoi asks the app that runs, and
 	// exits.

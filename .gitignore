@@ -15,3 +15,4 @@ mygo_windows_*.syso
 
 # A key a test wrote where the app keeps its own, which is no file of the tree's.
 /cmd/mayoi/ai-keys.json
+/ai-keys.json

@@ -407,6 +407,10 @@ func (a *app) aiSettingsView(c *ui.Context) {
 						}
 					})
 				})
+				// Where the conversations go, which a machine that keeps
+				// Mayoi's files beside the executable makes worth saying.
+				ui.Text(c, locales.AiConfKeptIn(a.settings.SessionsPath())).FontSize(11).
+					TextColor(p.faint).SingleLine()
 				ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 					if ui.Button(c, locales.ButtonCancel()).Clicked() {
 						a.post(func() {

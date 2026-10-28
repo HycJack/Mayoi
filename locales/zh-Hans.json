@@ -51,6 +51,7 @@
   },
   "aiConfKeyKept": "{provider} 的密钥已保存。",
   "aiConfKeyPlaceholder": "sk-…",
+  "aiConfKeptIn": "对话记录保存在 {folder}",
   "aiConfKeyWhy": "保存在 ai-keys.json，不同步到账号。",
   "aiConfKeep": "保留这个模型",
   "aiConfModels": "模型",

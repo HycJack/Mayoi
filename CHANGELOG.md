@@ -26,6 +26,8 @@ needs a `## <version>` section here, or its build fails.
 - **AI Settings** lays its fields out in two columns, so all of them fit a window of the usual size.
 - A window too short for the fields scrolls them, with a bar beside them and **Save** under them in sight.
 - A model of your own is typed in the field of **AI Settings** and kept with `Enter`, for an endpoint that does not list it.
+- A machine that refuses writes to the system's folder gets `data` beside the executable, settings carried over.
+- **AI Settings** says where the conversations are kept.
 - Language servers start themselves for the files opened: errors and warnings wave under the code, and the status bar counts them.
 - `F12` goes to the definition of the name at the caret, and `Shift+F12` lists its references in the sidebar.
 - The status bar's error and warning counts go to the next one of their kind when clicked.

@@ -626,6 +626,16 @@ func (msgs Messages) AiConfKeyPlaceholder() string {
 	return Catalog.Format(msgs.locale, "aiConfKeyPlaceholder", nil)
 }
 
+// AiConfKeptIn says "Conversations are kept in {folder}"
+// in the language the app shows.
+func AiConfKeptIn(folder string) string { return In(i18n.Locale()).AiConfKeptIn(folder) }
+
+// AiConfKeptIn says "Conversations are kept in {folder}"
+// in the language of msgs.
+func (msgs Messages) AiConfKeptIn(folder string) string {
+	return Catalog.Format(msgs.locale, "aiConfKeptIn", map[string]any{"folder": folder})
+}
+
 // AiConfKeyWhy says "Kept in ai-keys.json, which is not synced to your account."
 // in the language the app shows.
 func AiConfKeyWhy() string { return In(i18n.Locale()).AiConfKeyWhy() }

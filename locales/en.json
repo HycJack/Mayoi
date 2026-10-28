@@ -297,6 +297,7 @@
   },
   "aiConfKeyKept": "A key is kept for {provider}.",
   "aiConfKeyPlaceholder": "sk-…",
+  "aiConfKeptIn": "Conversations are kept in {folder}",
   "aiConfKeyWhy": "Kept in ai-keys.json, which is not synced to your account.",
   "aiConfKeep": "Keep this model",
   "aiConfModels": "Models",

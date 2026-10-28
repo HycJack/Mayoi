@@ -948,15 +948,25 @@ func TestTheSettingsScrollInAShortWindow(t *testing.T) {
 	if save.Y < 0 || save.Y+save.H > 320 {
 		t.Errorf("the Save button is at %v, outside the window", save)
 	}
-	// Scrolled to the end, the last of the fields is in sight.
+	// The fields below the window are reached by the scroll the bar beside
+	// them reports: at the end of it, the last of them is in sight, above
+	// the buttons.
+	last := locales.AiConfExtraWhy()
+	below, ok := hs.tt.Find(last)
+	if ok && below.Y+below.H < save.Y {
+		t.Fatalf("%q is in sight without scrolling: %v", last, below)
+	}
 	a.aiConf.scroll.Y = a.aiConf.scroll.MaxY
 	hs.settle()
-	voices, found := hs.tt.Find(locales.AiConfVoices())
-	if !found || voices.H == 0 {
-		t.Fatalf("the voices are not reached: %v", voices)
+	if a.aiConf.scroll.Y < a.aiConf.scroll.MaxY/2 {
+		t.Errorf("the fields are not at the end they were set to: %v of %v", a.aiConf.scroll.Y, a.aiConf.scroll.MaxY)
 	}
-	if voices.Y+voices.H > save.Y {
-		t.Errorf("the voices are at %v, past the buttons at %v", voices, save)
+	end, ok := hs.tt.Find(last)
+	if !ok || end.H == 0 {
+		t.Fatalf("%q is not reached: %v", last, end)
+	}
+	if end.Y < 46 || end.Y+end.H > save.Y {
+		t.Errorf("%q is at %v, not between the top of the dialog and the buttons at %v", last, end, save)
 	}
 }
 

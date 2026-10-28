@@ -51,6 +51,7 @@
   },
   "aiConfKeyKept": "{provider} のキーは保存済みです。",
   "aiConfKeyPlaceholder": "sk-…",
+  "aiConfKeptIn": "会話は {folder} に保存します",
   "aiConfKeyWhy": "ai-keys.json に保存し、アカウントとは同期しません。",
   "aiConfKeep": "このモデルを残す",
   "aiConfModels": "モデル",
