@@ -4,6 +4,10 @@ import (
 	"strings"
 
 	piai "github.com/HycJack/pi-ai-go"
+	// The providers of pi-ai-go register themselves when their package is
+	// imported, one for each protocol a model can speak: without them every
+	// question ends in "no provider registered for API".
+	_ "github.com/HycJack/pi-ai-go/providers"
 )
 
 // The two ways an endpoint can speak. Anything that speaks one of them
