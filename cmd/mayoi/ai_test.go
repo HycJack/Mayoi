@@ -1043,7 +1043,7 @@ func TestTheModelsAreFetchedAndNarrowed(t *testing.T) {
 		var out struct {
 			Data []struct{ ID string } `json:"data"`
 		}
-		for i := 0; i < aiConfRows+2; i++ {
+		for i := 0; i < a.aiConfRowCount()+2; i++ {
 			out.Data = append(out.Data, struct{ ID string }{ID: "m-" + strconv.Itoa(i)})
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -1059,7 +1059,7 @@ func TestTheModelsAreFetchedAndNarrowed(t *testing.T) {
 	if err := hs.tt.Click(locales.AiConfFetch()); err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, hs, func() bool { return len(a.aiConf.listed) == aiConfRows+2 })
+	waitFor(t, hs, func() bool { return len(a.aiConf.listed) == a.aiConfRowCount()+2 })
 	// The key typed is the one looked with, before anything is saved.
 	mu.Lock()
 	got := auth
@@ -1070,13 +1070,14 @@ func TestTheModelsAreFetchedAndNarrowed(t *testing.T) {
 	if !hs.tt.HasText("m-0") {
 		t.Errorf("the models are not listed: %q", hs.tt.Texts())
 	}
-	// The list is cut to what a dialog shows, and says how many follow.
-	shown, more := aiConfShown(&a.aiConf)
-	if len(shown) != aiConfRows || more != 2 {
-		t.Errorf("%d shown and %d more", len(shown), more)
+	// The list is cut to what the box shows, and says how many follow.
+	shown, more := a.aiConfShown(&a.aiConf)
+	rows := a.aiConfRowCount()
+	if len(shown) != rows || more != 2 {
+		t.Errorf("%d shown and %d more, of %d rows", len(shown), more, rows)
 	}
 	narrowed := a.aiConf.filteredBy("m-1")
-	shown, more = aiConfShown(&narrowed)
+	shown, more = a.aiConfShown(&narrowed)
 	if len(shown) != 1 || shown[0] != "m-1" || more != 0 {
 		t.Errorf("filtered to %v with %d more", shown, more)
 	}

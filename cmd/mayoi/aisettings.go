@@ -56,10 +56,18 @@ type aiSettings struct {
 	scroll ui.ScrollState
 }
 
-// aiConfRows is how many models the dialog shows at once, past which it is
-// filtered to find one. The box scrolls to the rest, so that the fields
-// beside it stay in sight.
-const aiConfRows = 8
+// aiConfRowHeight is how tall a row of the models is, and aiConfRowGap the
+// room the box leaves around them: the two say how many rows the box shows
+// in a window, which is what the count of the rest must match.
+const (
+	aiConfRowHeight = 22
+	aiConfRowGap    = 4
+)
+
+// aiConfRowCount is how many models the box shows at once in a window.
+func (a *app) aiConfRowCount() int {
+	return max(int((a.aiConfListHeight()-aiConfRowGap)/aiConfRowHeight), 2)
+}
 
 // aiConfListHeight is how tall the box of models is in a window: a share of
 // it, so that the fields beside the list stay in the window.
@@ -253,14 +261,15 @@ func (a *app) fetchAIModels() {
 }
 
 // aiConfShown is the models the dialog lists: those matching what was
-// typed, at most aiConfRows of them, and how many more there are.
-func aiConfShown(c *aiSettings) (shown []string, more int) {
+// typed, as many as the box shows, and how many more there are.
+func (a *app) aiConfShown(c *aiSettings) (shown []string, more int) {
 	filter := strings.ToLower(strings.TrimSpace(c.filter))
+	rows := a.aiConfRowCount()
 	for _, m := range c.listed {
 		if filter != "" && !strings.Contains(strings.ToLower(m), filter) {
 			continue
 		}
-		if len(shown) == aiConfRows {
+		if len(shown) == rows {
 			more++
 			continue
 		}
@@ -525,13 +534,13 @@ func (a *app) aiConfModels(c *ui.Context, conf *aiSettings) {
 			ui.Text(c, conf.fetch).FontSize(11).TextColor(why).SingleLine().Shrink(1)
 		}
 	})
-	if len(conf.listed) > aiConfRows {
+	if len(conf.listed) > a.aiConfRowCount() {
 		a.textKeys(ui.TextInputBase(c.Key("ai-conf-filter"), &conf.filter)).FontSize(12).
 			Placeholder(locales.AiConfFilter()).Label(locales.AiConfFilter())
 	}
 	// The rows scroll in a box of their own, so that a list
 	// of hundreds does not push the buttons out of the window.
-	shown, more := aiConfShown(conf)
+	shown, more := a.aiConfShown(conf)
 	if len(shown) > 0 {
 		rows := func() {
 			for _, model := range shown {
