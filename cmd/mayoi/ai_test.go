@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"mayoi/internal/ai"
+	"mayoi/internal/settings"
 	"mayoi/locales"
 
 	piai "github.com/HycJack/pi-ai-go"
@@ -889,6 +890,73 @@ func TestAModelIsTypedIn(t *testing.T) {
 	hs.settle()
 	if a.settings.AI.Model != "local-qwen-32b" {
 		t.Errorf("the settings say %q", a.settings.AI.Model)
+	}
+}
+
+// The dialog is as tall as the window allows. In a window of the usual size
+// its fields fit, and none of them is past the bottom; in one too short for
+// them, they scroll, and the bar beside them says so.
+func TestTheSettingsFitTheWindow(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	a.aiConf.protocol = ai.OpenAI
+	a.aiConf.listed = []string{"a-1", "a-2"}
+	a.aiConf.voices = []settings.Persona{{Name: "Plain Talk"}}
+	hs.settle()
+	// The whole of it is in the window, and nothing needs scrolling.
+	box, ok := hs.tt.Find(locales.AiConfTitle())
+	if !ok || box.H == 0 {
+		t.Fatalf("no dialog: %v", box)
+	}
+	if box.Y < 0 || box.Y+box.H > 760 {
+		t.Errorf("the dialog is at %v, outside a window of 760", box)
+	}
+	for _, label := range []string{locales.ButtonSave(), locales.AiConfVoices(), locales.AiConfExtra()} {
+		r, ok := hs.tt.Find(label)
+		if !ok || r.H == 0 {
+			t.Errorf("%q is not in the window: %v", label, r)
+			continue
+		}
+		if r.Y < box.Y || r.Y+r.H > box.Y+box.H {
+			t.Errorf("%q is at %v, outside the dialog %v", label, r, box)
+		}
+	}
+	if a.aiConf.scroll.MaxY > 0 {
+		t.Errorf("the fields scroll in a window of 760: %v", a.aiConf.scroll.MaxY)
+	}
+}
+
+// A window too short for the fields scrolls them, and keeps the buttons in
+// sight under them.
+func TestTheSettingsScrollInAShortWindow(t *testing.T) {
+	hs := newHarness(t, true)
+	hs.tt.SetSize(1200, 320)
+	a := hs.a
+	hs.openAIConf()
+	a.aiConf.protocol = ai.OpenAI
+	a.aiConf.listed = []string{"a-1", "a-2"}
+	a.aiConf.voices = []settings.Persona{{Name: "Plain Talk"}}
+	hs.settle()
+	if a.aiConf.scroll.MaxY <= 0 {
+		t.Fatalf("the fields do not scroll in a window of 320: %v", a.aiConf.scroll.MaxY)
+	}
+	save, ok := hs.tt.Find(locales.ButtonSave())
+	if !ok || save.H == 0 {
+		t.Fatalf("no Save button: %v", save)
+	}
+	if save.Y < 0 || save.Y+save.H > 320 {
+		t.Errorf("the Save button is at %v, outside the window", save)
+	}
+	// Scrolled to the end, the last of the fields is in sight.
+	a.aiConf.scroll.Y = a.aiConf.scroll.MaxY
+	hs.settle()
+	voices, found := hs.tt.Find(locales.AiConfVoices())
+	if !found || voices.H == 0 {
+		t.Fatalf("the voices are not reached: %v", voices)
+	}
+	if voices.Y+voices.H > save.Y {
+		t.Errorf("the voices are at %v, past the buttons at %v", voices, save)
 	}
 }
 

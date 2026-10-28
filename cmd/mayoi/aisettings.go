@@ -51,31 +51,31 @@ type aiSettings struct {
 	voices []settings.Persona
 	// err is what is wrong with what was typed, shown under the fields.
 	err string
+	// scroll is how far the fields are scrolled, which the bar beside them
+	// is drawn from: a dialog taller than the window says so.
+	scroll ui.ScrollState
 }
 
-// aiConfRows is how many models the dialog shows at once. The list used to
-// be cut here, which left an endpoint's longer list half seen; it scrolls
-// instead, in a box below the fields, so that the buttons stay in sight.
+// aiConfRows is how many models the dialog shows at once, past which it is
+// filtered to find one. The box scrolls to the rest, so that the fields
+// beside it stay in sight.
 const aiConfRows = 8
 
-// aiConfListHeight is how tall the box of models is in a window: about
-// aiConfListRows of them, and never so tall that the buttons below it leave
-// a window of the smallest size.
+// aiConfListHeight is how tall the box of models is in a window: a share of
+// it, so that the fields beside the list stay in the window.
 func (a *app) aiConfListHeight() float32 {
 	if a.winH == 0 {
-		return 130
+		return 110
 	}
-	return min(max(a.winH*0.18, 60), 200)
+	return min(max(a.winH*0.14, 56), 160)
 }
-
-// aiConfListRows is the models the box of models shows at once.
-const aiConfListRows = 6
 
 // aiConfW is how wide the dialog is, and aiConfPad how far its content is
 // from its sides: a box that scrolls is given its width, as a box that
-// grows to its parent would be as wide as the longest row.
+// grows to its parent would be as wide as the longest row. Two columns of
+// fields fit side by side in it.
 const (
-	aiConfW   = 560
+	aiConfW   = 820
 	aiConfPad = 18
 )
 
@@ -354,6 +354,26 @@ func personaID(name string) string {
 	return id
 }
 
+// aiConfBar draws the bar of the dialog's fields: what share of them the
+// window shows, and where in them it looks. It is there as long as there is
+// more to see, which is what tells the user the dialog goes on below.
+func (a *app) aiConfBar(pt *ui.Painter, r ui.Rect, s *ui.ScrollState) {
+	if s.MaxY <= 0 || r.H <= 0 {
+		return
+	}
+	p := a.pal
+	const w, gap = 4, 2
+	track := ui.Rect{X: r.X + r.W - w - gap, Y: r.Y, W: w, H: r.H}
+	content := r.H + s.MaxY
+	thumb := max(r.H*r.H/content, 28)
+	if thumb > r.H {
+		thumb = r.H
+	}
+	y := r.Y + (r.H-thumb)*(s.Y/s.MaxY)
+	pt.Fill(track, p.border, w/2)
+	pt.Fill(ui.Rect{X: track.X, Y: y, W: w, H: thumb}, p.faint, w/2)
+}
+
 // aiSettingsView is the dialog of the assistant's settings.
 func (a *app) aiSettingsView(c *ui.Context) {
 	conf := &a.aiConf
@@ -365,13 +385,21 @@ func (a *app) aiSettingsView(c *ui.Context) {
 		back := a.dialogBack(c, "ai-settings")
 		back.Children(func() {
 			box := a.floating(c, ui.Column(c).Width(aiConfW).MaxWidthPercent(94).MaxHeightPercent(90).
-				Margin(titleBarH+8, 0, 0, 0).Padding(16, aiConfPad).Gap(10).Radius(10), true).
+				Margin(titleBarH+8, 0, 0, 0).Padding(14, aiConfPad).Gap(8).Radius(10), true).
 				Role(ui.RoleDialog).Label(locales.AiConfTitle())
 			box.Children(func() {
-				// The fields scroll, as the dialog is taller than some
-				// windows: the rows of buttons stay under them, in sight.
-				ui.Scroll(c.Key("ai-conf-body")).Grow(1).MinHeight(0).Children(func() {
-					ui.Column(c).Gap(10).Children(func() {
+				// The fields scroll, as the dialog holds more than a short
+				// window shows: the rows of buttons stay under them, in
+				// sight, and a bar along their side says how much more
+				// there is. The window's own bar shows under the pointer
+				// alone, which a dialog that is cut short cannot wait for.
+				body := ui.Scroll(c.Key("ai-conf-body")).Grow(1).MinHeight(0).
+					TrackScroll(&conf.scroll).
+					DrawOver(func(pt *ui.Painter, r ui.Rect) {
+						a.aiConfBar(pt, r, &conf.scroll)
+					})
+				body.Children(func() {
+					ui.Column(c).Gap(8).Children(func() {
 						ui.Text(c, locales.AiConfTitle()).FontSize(14).FontWeight(600).TextColor(p.text).SingleLine()
 						a.aiConfFields(c, conf)
 						if conf.err != "" {
@@ -400,10 +428,29 @@ func (a *app) aiSettingsView(c *ui.Context) {
 }
 
 // aiConfFields is what the dialog shows of the assistant's settings: the
-// endpoint, the models, what the assistant may do, and the voices.
+// endpoint and what the assistant may do down the left, the models and the
+// voices down the right. Two columns, because one holds more than a window
+// of the usual height shows.
 func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
+	ui.Row(c).Gap(22).AlignItems(ui.Start).Children(func() {
+		ui.Column(c).Key("ai-conf-left").Grow(1).MinWidth(0).Gap(8).Children(func() {
+			a.aiConfEndpoint(c, conf)
+			a.aiConfCheck(c, &conf.approve, locales.AiConfApprove(), locales.AiConfApproveWhy())
+			a.aiConfCheck(c, &conf.bash, locales.AiConfBash(), locales.AiConfBashWhy())
+			a.aiConfExtra(c, conf)
+		})
+		ui.Column(c).Key("ai-conf-right").Grow(1).MinWidth(0).Gap(8).Children(func() {
+			a.aiConfModels(c, conf)
+			a.aiConfVoices(c, conf)
+		})
+	})
+}
+
+// aiConfEndpoint is how the assistant speaks to its service: the protocol,
+// where it is, and the key it is asked with. The key is never shown, and
+// never in the settings file.
+func (a *app) aiConfEndpoint(c *ui.Context, conf *aiSettings) {
 	p := a.pal
-	// The endpoint: how it speaks, where it is, and the key.
 	a.aiConfLabel(c, locales.AiConfProtocol())
 	ui.Row(c).Gap(6).Wrap().Children(func() {
 		for _, name := range ai.Protocols() {
@@ -419,15 +466,13 @@ func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
 			}
 		}
 	})
-	a.aiConfLabel(c, locales.AiConfBaseURL())
+	a.aiConfLabelWhy(c, locales.AiConfBaseURL(), locales.AiConfBaseURLWhy())
 	base := a.textKeys(ui.TextInputBase(c.Key("ai-conf-base"), &conf.base)).FontSize(12.5).
 		Placeholder(ai.DefaultBaseURL(conf.protocol)).Label(locales.AiConfBaseURL())
 	if base.Submitted() {
 		a.post(a.saveAISettings)
 	}
-	ui.Text(c, locales.AiConfBaseURLWhy()).FontSize(11).TextColor(p.faint).SingleLine()
 
-	// The key: never shown, and never in the settings file.
 	a.aiConfLabel(c, locales.AiConfKey())
 	hint := locales.AiConfKeyWhy()
 	if conf.kept {
@@ -439,10 +484,26 @@ func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
 		a.post(a.saveAISettings)
 	}
 	ui.Text(c, hint).FontSize(11).TextColor(p.faint).SingleLine()
+}
 
-	// The models: what the endpoint says it offers, and which
-	// of them the assistant may ask for.
-	a.aiConfLabel(c, locales.AiConfModels())
+// aiConfExtra is what the user adds to every prompt, in every voice.
+func (a *app) aiConfExtra(c *ui.Context, conf *aiSettings) {
+	p := a.pal
+	a.aiConfLabel(c, locales.AiConfExtra())
+	// A row of its own, so that the column does not stretch the field to
+	// the height of the fields beside it.
+	ui.Row(c).AlignItems(ui.Start).Children(func() {
+		ui.TextArea(c.Key("ai-conf-extra"), &conf.extra).FontSize(12).Height(52).
+			Background(p.editor).Padding(6, 8).Radius(6)
+	})
+	ui.Text(c, locales.AiConfExtraWhy()).FontSize(11).TextColor(p.faint).SingleLine()
+}
+
+// aiConfModels is what the endpoint says it offers, and which of those the
+// assistant may ask for.
+func (a *app) aiConfModels(c *ui.Context, conf *aiSettings) {
+	p := a.pal
+	a.aiConfLabelWhy(c, locales.AiConfModels(), locales.AiConfModelsWhy())
 	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 		fetch := locales.AiConfFetch()
 		if conf.fetching {
@@ -460,7 +521,6 @@ func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
 			ui.Text(c, conf.fetch).FontSize(11).TextColor(why).SingleLine().Shrink(1)
 		}
 	})
-	ui.Text(c, locales.AiConfModelsWhy()).FontSize(11).TextColor(p.faint).SingleLine()
 	if len(conf.listed) > aiConfRows {
 		a.textKeys(ui.TextInputBase(c.Key("ai-conf-filter"), &conf.filter)).FontSize(12).
 			Placeholder(locales.AiConfFilter()).Label(locales.AiConfFilter())
@@ -523,18 +583,12 @@ func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
 			}
 		}
 	})
+}
 
-	a.aiConfCheck(c, &conf.approve, locales.AiConfApprove(), locales.AiConfApproveWhy())
-	a.aiConfCheck(c, &conf.bash, locales.AiConfBash(), locales.AiConfBashWhy())
-
-	a.aiConfLabel(c, locales.AiConfExtra())
-	ui.TextArea(c.Key("ai-conf-extra"), &conf.extra).FontSize(12).Height(36).
-		Background(p.editor).Padding(6, 8).Radius(6)
-	ui.Text(c, locales.AiConfExtraWhy()).FontSize(11).TextColor(p.faint).SingleLine()
-
-	// The voices the user wrote, each a name and what it is
-	// told, and the built-in five are not edited: they come
-	// with Mayoi.
+// aiConfVoices is the voices the user wrote, each a name and what it is
+// told: the built-in five are not edited, as they come with Mayoi.
+func (a *app) aiConfVoices(c *ui.Context, conf *aiSettings) {
+	p := a.pal
 	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 		ui.Text(c, locales.AiConfVoices()).FontSize(12.5).TextColor(p.text).SingleLine()
 		if ui.Button(c, locales.AiConfAddVoice()).FontSize(11.5).Padding(4, 8).Clicked() {
@@ -592,12 +646,22 @@ func (a *app) aiConfLabel(c *ui.Context, label string) {
 	ui.Text(c, label).FontSize(11.5).FontWeight(600).TextColor(a.pal.muted).SingleLine()
 }
 
-// aiConfCheck is a setting that is on or off, with the line that says what
-// it means.
-func (a *app) aiConfCheck(c *ui.Context, on *bool, label, why string) {
-	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-		ui.Checkbox(c, on, label).FontSize(12.5)
+// aiConfLabelWhy is what a group of fields is called, with what it means
+// beside it: a dialog of many fields says such things on the line the name
+// is on, rather than under it, so that fewer of them go past the window.
+func (a *app) aiConfLabelWhy(c *ui.Context, label, why string) {
+	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, label).FontSize(11.5).FontWeight(600).TextColor(a.pal.muted).SingleLine()
 		ui.Text(c, why).FontSize(11).TextColor(a.pal.faint).SingleLine().Shrink(1)
+	})
+}
+
+// aiConfCheck is a setting that is on or off, with the line under it that
+// says what it means: the column of fields is too narrow for one line.
+func (a *app) aiConfCheck(c *ui.Context, on *bool, label, why string) {
+	ui.Column(c).Gap(2).Children(func() {
+		ui.Checkbox(c, on, label).FontSize(12.5)
+		ui.Text(c, why).FontSize(11).TextColor(a.pal.faint).SingleLine()
 	})
 }
 
