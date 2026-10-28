@@ -8,6 +8,8 @@ needs a `## <version>` section here, or its build fails.
 - The terminal's native library is built into `Mayoi.exe`, so the file copied on its own still opens a terminal.
 - The **AI Assistant** panel sits at the right of the window: **View → AI Assistant**, or `Alt+CmdOrCtrl+A`.
 - Ask about the code of the folder; the answer streams in, and **Stop** or `Esc` ends it.
+- Answers are drawn as the Markdown they are: headings, lists, quotes, tables and cards of code that wrap.
+- An answer's copy button puts its Markdown on the clipboard, and a drag over it copies what it covers.
 - The assistant reads, searches and edits the folder, and opens the file it explains at its line.
 - A write comes as a card with the changed lines: **Approve** writes them, **Reject** sends them back.
 - `ai.approveEdits` writes without asking first, and `ai.allowBash` lets the assistant run commands, each approved.

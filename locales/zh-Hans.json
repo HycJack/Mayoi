@@ -14,6 +14,8 @@
   "aiApproveTitle": "助手想改动",
   "aiChats": "对话",
   "aiChatFailed": "助手出错了：{error}",
+  "aiCopiedAnswer": "已复制这条回复",
+  "aiCopyAnswer": "复制这条回复",
   "aiEmpty": "问问这个文件夹里的代码。",
   "aiFailed": "无法撰写信息：{error}",
   "aiLimitLater": "今天的 AI 额度已用完，请在 {time} 之后再试。",

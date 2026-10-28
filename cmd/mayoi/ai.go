@@ -61,6 +61,9 @@ type aiPanel struct {
 	// shown says the panel has drawn itself once, so a window restored
 	// with it open gives it the keyboard.
 	shown bool
+	// transcript is the box the conversation scrolls in, whose width its
+	// answers are laid out to.
+	transcript ui.Handle
 	// chat is the conversation on disk this panel writes to, "" until
 	// the first answer of a new chat.
 	chat string
@@ -84,6 +87,11 @@ type aiMessage struct {
 	stopped bool
 	// tools are the tools the assistant called while saying it.
 	tools []string
+	// md is the answer's text as Markdown, parsed again when the text
+	// changes, as every delta of an answer changes it; mdText is the text
+	// it was parsed from.
+	md     *markdownPreview
+	mdText string
 }
 
 // aiApproval is a write waiting for its answer: the change, and where the
@@ -802,17 +810,34 @@ func (a *app) aiTranscript(c *ui.Context) {
 		ui.Text(c, locales.AiEmpty()).FontSize(12.5).TextColor(p.muted).Padding(12, 12).Grow(1)
 		return
 	}
-	ui.Scroll(c.Key("ai-msgs")).Grow(1).MinHeight(0).Padding(6).Children(func() {
+	// The conversation is the user's to copy, a word or a whole answer,
+	// as text is anywhere in Mayoi.
+	ui.Scroll(c.Key("ai-msgs")).Grow(1).MinHeight(0).Padding(6).Selectable().
+		Bind(&ai.transcript).Children(func() {
+		// The message's own padding is not the answer's to draw in: what
+		// it has is what a block of Markdown may be as wide as.
+		width := ai.transcript.Bounds(c).W - 16
 		for i := range ai.msgs {
 			msg := &ai.msgs[i]
 			ui.Column(c.Key("ai-msg-"+strconv.Itoa(i))).Padding(6, 8).Gap(2).Children(func() {
-				ui.Text(c, aiRoleName(msg.role)).FontSize(10).FontWeight(600).LetterSpacing(titleSpacing).
-					TextColor(p.muted).SingleLine()
+				ui.Row(c).AlignItems(ui.Center).Gap(4).Children(func() {
+					ui.Text(c, aiRoleName(msg.role)).FontSize(10).FontWeight(600).LetterSpacing(titleSpacing).
+						TextColor(p.muted).SingleLine().Grow(1)
+					// An answer is worth all of it, without dragging over
+					// it: the button copies what was said, as Markdown.
+					if msg.role != "user" && msg.text != "" &&
+						a.smallButton(c, iconCopy, locales.AiCopyAnswer()) {
+						a.services.WriteClipboard(msg.text)
+						a.tell(note{message: locales.AiCopiedAnswer()})
+					}
+				})
 				switch {
 				case msg.stopped:
-					ui.Text(c, locales.AiStopped()).FontSize(12.5).TextColor(p.muted)
+					ui.Text(c, locales.AiStopped()).FontSize(answerMsgSize).TextColor(p.muted)
+				case msg.text != "" && msg.role == "user":
+					ui.Text(c, msg.text).FontSize(answerMsgSize).TextColor(p.text)
 				case msg.text != "":
-					ui.Text(c, msg.text).FontSize(12.5).TextColor(p.text)
+					a.answerView(c, msg, width)
 				}
 				if len(msg.tools) > 0 {
 					ui.Text(c, locales.AiToolRan(strings.Join(msg.tools, ", "))).FontSize(11).

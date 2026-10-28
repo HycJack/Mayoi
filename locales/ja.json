@@ -14,6 +14,8 @@
   "aiApproveTitle": "アシスタントが変更を求めています",
   "aiChats": "チャット",
   "aiChatFailed": "アシスタントが失敗しました：{error}",
+  "aiCopiedAnswer": "回答をコピーしました",
+  "aiCopyAnswer": "回答をコピー",
   "aiEmpty": "このフォルダーのコードについて聞いてください。",
   "aiFailed": "メッセージを書けませんでした：{error}",
   "aiLimitLater": "今日の AI トークンを使い切りました。{time} 以降にもう一度お試しください。",

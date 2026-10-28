@@ -356,6 +356,26 @@ func (msgs Messages) AiChatFailed(error string) string {
 	return Catalog.Format(msgs.locale, "aiChatFailed", map[string]any{"error": error})
 }
 
+// AiCopiedAnswer says "Copied the answer"
+// in the language the app shows.
+func AiCopiedAnswer() string { return In(i18n.Locale()).AiCopiedAnswer() }
+
+// AiCopiedAnswer says "Copied the answer"
+// in the language of msgs.
+func (msgs Messages) AiCopiedAnswer() string {
+	return Catalog.Format(msgs.locale, "aiCopiedAnswer", nil)
+}
+
+// AiCopyAnswer says "Copy the answer"
+// in the language the app shows.
+func AiCopyAnswer() string { return In(i18n.Locale()).AiCopyAnswer() }
+
+// AiCopyAnswer says "Copy the answer"
+// in the language of msgs.
+func (msgs Messages) AiCopyAnswer() string {
+	return Catalog.Format(msgs.locale, "aiCopyAnswer", nil)
+}
+
 // AiEmpty says "Ask about the code in this folder."
 // in the language the app shows.
 func AiEmpty() string { return In(i18n.Locale()).AiEmpty() }

@@ -260,6 +260,8 @@
   "aiApproveTitle": "The assistant wants to change",
   "aiChats": "Chats",
   "aiChatFailed": "The assistant failed: {error}",
+  "aiCopiedAnswer": "Copied the answer",
+  "aiCopyAnswer": "Copy the answer",
   "aiEmpty": "Ask about the code in this folder.",
   "aiFailed": "Couldn't write the message: {error}",
   "aiLimitLater": "You've used today's AI tokens. Try again after {time}.",

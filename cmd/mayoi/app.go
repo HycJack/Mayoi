@@ -307,6 +307,10 @@ type app struct {
 	ai     aiPanel
 	loop   aiLoop
 	target func() (piai.Model, string, error)
+	// answerCache keeps the code of the answers highlighted and the
+	// pictures of their Markdown decoded, by language and text, for the
+	// next parse of the same answer.
+	answerCache markdownCache
 	// aiConf is the dialog of the assistant's settings: the model, the key
 	// and what it may do in the folder.
 	aiConf aiSettings
