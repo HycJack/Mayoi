@@ -287,14 +287,15 @@ func (a *app) saveAISettings() {
 	if c.key != "" {
 		keys, err := ai.LoadKeys(a.settings.AIPath())
 		if err != nil {
-			c.err = a.aiSaid(err)
+			c.err = locales.AiConfSaveFailed(err.Error())
 			return
 		}
 		keys[c.protocol] = strings.TrimSpace(c.key)
 		if err := ai.SaveKeys(a.settings.AIPath(), keys); err != nil {
 			// The key stays where it is: a dialog that cannot save says
-			// so rather than closing as if it had.
-			c.err = a.aiSaid(err)
+			// so, and which file it could not write, rather than closing
+			// as if it had.
+			c.err = locales.AiConfSaveFailed(err.Error())
 			return
 		}
 	}

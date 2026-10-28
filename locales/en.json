@@ -311,6 +311,7 @@
   "aiConfProtocolAnthropic": "Anthropic-compatible",
   "aiConfProtocolOpenAI": "OpenAI-compatible",
   "aiConfRemove": "Remove this voice",
+  "aiConfSaveFailed": "Could not write the key: {reason}",
   "aiConfTitle": "AI Settings",
   "aiConfVoiceName": "Name",
   "aiConfVoiceWhat": "What it is told",

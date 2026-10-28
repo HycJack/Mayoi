@@ -65,6 +65,7 @@
   "aiConfProtocolAnthropic": "Anthropic 兼容",
   "aiConfProtocolOpenAI": "OpenAI 兼容",
   "aiConfRemove": "删除这个语气",
+  "aiConfSaveFailed": "无法写入密钥：{reason}",
   "aiConfTitle": "AI 设置",
   "aiConfVoiceName": "名称",
   "aiConfVoiceWhat": "指令",

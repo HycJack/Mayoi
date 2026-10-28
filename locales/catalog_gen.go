@@ -766,6 +766,16 @@ func (msgs Messages) AiConfRemove() string {
 	return Catalog.Format(msgs.locale, "aiConfRemove", nil)
 }
 
+// AiConfSaveFailed says "Could not write the key: {reason}"
+// in the language the app shows.
+func AiConfSaveFailed(reason string) string { return In(i18n.Locale()).AiConfSaveFailed(reason) }
+
+// AiConfSaveFailed says "Could not write the key: {reason}"
+// in the language of msgs.
+func (msgs Messages) AiConfSaveFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "aiConfSaveFailed", map[string]any{"reason": reason})
+}
+
 // AiConfTitle says "AI Settings"
 // in the language the app shows.
 func AiConfTitle() string { return In(i18n.Locale()).AiConfTitle() }

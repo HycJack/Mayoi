@@ -65,6 +65,7 @@
   "aiConfProtocolAnthropic": "Anthropic 互換",
   "aiConfProtocolOpenAI": "OpenAI 互換",
   "aiConfRemove": "この口調を削除",
+  "aiConfSaveFailed": "キーを書き込めませんでした: {reason}",
   "aiConfTitle": "AI 設定",
   "aiConfVoiceName": "名前",
   "aiConfVoiceWhat": "指示",

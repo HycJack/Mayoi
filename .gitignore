@@ -1,4 +1,4 @@
-﻿/build/
+/build/
 /.mygo/
 mygo_windows_*.syso
 /mayoi
@@ -12,3 +12,6 @@ mygo_windows_*.syso
 
 # The assistant's chats, which a test keeps in the tree unless it says otherwise.
 /cmd/mayoi/ai-sessions/
+
+# A key a test wrote where the app keeps its own, which is no file of the tree's.
+/cmd/mayoi/ai-keys.json

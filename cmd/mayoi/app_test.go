@@ -165,7 +165,9 @@ type harness struct {
 
 func newHarness(t testing.TB, dark bool) *harness {
 	root := workspaceFixture(t)
-	s := settings.Default()
+	// A test's settings, and the keys beside them, go in its own folder: a
+	// test that saves must not write into the tree the suite runs in.
+	s := settings.Load(filepath.Join(t.TempDir(), "settings.json"))
 	// A test's chats go in its own folder: the suite must not write into
 	// the tree, nor read what another test wrote.
 	s.SessionsDir = filepath.Join(t.TempDir(), "ai-sessions")

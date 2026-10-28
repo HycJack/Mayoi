@@ -1107,6 +1107,40 @@ func TestAVoiceMayNotTakeABuiltInName(t *testing.T) {
 	}
 }
 
+// A key that cannot be written is a dialog that says so, and which file it
+// could not write: the settings are not saved without it, and the dialog
+// does not close as if all had gone well.
+func TestAKeyThatCannotBeSavedSaysWhy(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	hs.openAIConf()
+	a.aiConf.protocol = ai.OpenAI
+	a.aiConf.model = "gpt-x"
+	a.aiConf.key = "sk-test-123"
+	// A folder in the place of the file: no key can be written into a name
+	// a folder has taken.
+	if err := os.Mkdir(a.settings.AIPath(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if err := hs.tt.Click(locales.ButtonSave()); err != nil {
+		t.Fatal(err)
+	}
+	hs.settle()
+	if a.aiConf.err == "" {
+		t.Fatal("the dialog closed as if it had saved")
+	}
+	if !strings.Contains(a.aiConf.err, "ai-keys.json") {
+		t.Errorf("the dialog says %q", a.aiConf.err)
+	}
+	if !a.aiConf.open {
+		t.Error("the dialog closed without saving")
+	}
+	if a.settings.AI.Model == "gpt-x" {
+		t.Error("the settings were saved without the key")
+	}
+}
+
 func TestTheExtraInstructionsReachTheModel(t *testing.T) {
 	hs := newHarness(t, true)
 	a := hs.a
