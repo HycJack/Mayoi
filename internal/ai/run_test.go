@@ -122,28 +122,33 @@ func joined(steps []Step) string {
 	return sb.String()
 }
 
+// TestLoopStopsAtItsSteps: a model that calls a tool forever ends at the
+// steps the run was given, which it says.
 func TestLoopStopsAtItsSteps(t *testing.T) {
-	ran := 0
-	var steps []Step
-	tools := aCounter(&ran)
-	_, err := Loop(context.Background(), Run{
-		Model:  fauxModel(t),
-		Prompt: "count forever",
-		Tools:  tools,
-		Stream: scriptedStream(calling("count", "call-1")),
-	}, func(s Step) { steps = append(steps, s) })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if ran > maxSteps {
-		t.Errorf("the tool ran %d times, past the %d steps", ran, maxSteps)
-	}
-	var out bool
-	for _, s := range steps {
-		out = out || s.OutOfSteps
-	}
-	if !out {
-		t.Errorf("the run did not say it ran out of steps: %+v", steps)
+	for _, steps := range []int{3, DefaultSteps} {
+		ran := 0
+		var seen []Step
+		tools := aCounter(&ran)
+		_, err := Loop(context.Background(), Run{
+			Model:  fauxModel(t),
+			Prompt: "count forever",
+			Tools:  tools,
+			Steps:  steps,
+			Stream: scriptedStream(calling("count", "call-1")),
+		}, func(s Step) { seen = append(seen, s) })
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ran > steps {
+			t.Errorf("the tool ran %d times, past the %d steps", ran, steps)
+		}
+		var out bool
+		for _, s := range seen {
+			out = out || s.OutOfSteps
+		}
+		if !out {
+			t.Errorf("a run of %d steps did not say it ran out: %+v", steps, seen)
+		}
 	}
 }
 

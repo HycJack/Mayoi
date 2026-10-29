@@ -8,8 +8,14 @@ import (
 	"github.com/HycJack/pi-ai-go/core"
 )
 
-// maxSteps is how many turns a run takes at most.
-const maxSteps = 24
+// DefaultSteps is how many turns a run takes when the settings say
+// nothing: a model that calls one tool after another has room to finish a
+// task, and a model that never stops still ends.
+const DefaultSteps = 60
+
+// mostSteps is as many turns as a run takes, however the settings ask: a
+// question is not a day's work, and a model that loops would spend one.
+const mostSteps = 500
 
 // Step is what a run did, as it goes: the text of a message, the tools
 // it called, and that it ran out of steps.
@@ -32,13 +38,25 @@ type Run struct {
 	// Pictures are the pictures the question comes with, which the model
 	// is shown after its text.
 	Pictures []Picture
+	// Steps is how many turns the run takes at most, 0 for DefaultSteps.
+	Steps int
+}
+
+// stepsOf is how many turns a run of Steps turns takes, within what a
+// question is worth.
+func stepsOf(n int) int {
+	if n <= 0 {
+		return DefaultSteps
+	}
+	return min(n, mostSteps)
 }
 
 // Loop asks the model, runs the tools it calls, and asks again with
 // their results, until it answers without a tool or the steps run out.
 //
 // The turn-taking is pi-ai-go's agent loop; this only watches it. A run
-// is capped so that a model that keeps calling tools ends.
+// is capped, at Run.Steps turns, so that a model that keeps calling tools
+// ends.
 func Loop(ctx context.Context, r Run, onStep func(Step)) ([]core.Message, error) {
 	if onStep == nil {
 		onStep = func(Step) {}
@@ -50,6 +68,7 @@ func Loop(ctx context.Context, r Run, onStep func(Step)) ([]core.Message, error)
 	}
 	var mu sync.Mutex
 	turns := 0
+	steps := stepsOf(r.Steps)
 	state := agent.AgentState{
 		Model:        r.Model,
 		SystemPrompt: r.System,
@@ -64,7 +83,7 @@ func Loop(ctx context.Context, r Run, onStep func(Step)) ([]core.Message, error)
 			mu.Lock()
 			defer mu.Unlock()
 			turns++
-			return turns >= maxSteps
+			return turns >= steps
 		},
 	}
 	a := agent.New(agent.AgentOptions{InitialState: &state})
@@ -84,7 +103,7 @@ func Loop(ctx context.Context, r Run, onStep func(Step)) ([]core.Message, error)
 		return msgs, err
 	}
 	mu.Lock()
-	out := turns >= maxSteps
+	out := turns >= steps
 	mu.Unlock()
 	if out {
 		onStep(Step{OutOfSteps: true})

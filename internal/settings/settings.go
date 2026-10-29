@@ -235,6 +235,12 @@ type AISettings struct {
 	// ai.PermFullAccess. Empty means ai.PermAsk, or what the two
 	// settings it replaces say.
 	Permissions string `json:"permissions,omitempty"`
+	// MaxSteps is how many turns a question may take, counting the tools
+	// the assistant calls before it answers, 0 for ai.DefaultSteps.
+	MaxSteps int `json:"maxSteps,omitempty"`
+	// CommandSeconds is how long a command the assistant runs may take,
+	// in seconds, 0 for ai.DefaultCommandTimeout.
+	CommandSeconds int `json:"commandTimeout,omitempty"`
 	// ApproveEdits writes what the assistant asks without a card, as the
 	// user asked once and for all. Permissions replaces it, and it is
 	// read alone to turn an older settings file into one.

@@ -413,13 +413,19 @@ func TestThePanelShowsTheToolsThatRan(t *testing.T) {
 	}
 }
 
+// TestARunThatRunsOutOfStepsSaysSo: the panel says how many steps the
+// settings allowed, which is what the run stopped at.
 func TestARunThatRunsOutOfStepsSaysSo(t *testing.T) {
 	hs := newHarness(t, true)
 	a := hs.a
+	a.settings.AI.MaxSteps = 7
 	a.target = func() (piai.Model, string, error) {
 		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
 	}
 	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
+		if r.Steps != 7 {
+			t.Errorf("the run takes %d steps, not the 7 of the settings", r.Steps)
+		}
 		onStep(ai.Step{OutOfSteps: true})
 		return nil, nil
 	}
@@ -427,7 +433,7 @@ func TestARunThatRunsOutOfStepsSaysSo(t *testing.T) {
 	if !a.ai.outOfSteps {
 		t.Error("the panel does not know the run ran out of steps")
 	}
-	if !hs.tt.HasText("24 steps") {
+	if !hs.tt.HasText("7 steps") {
 		t.Errorf("it is not shown: %q", hs.tt.Texts())
 	}
 }

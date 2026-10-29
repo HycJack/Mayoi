@@ -45,6 +45,10 @@ type aiSettings struct {
 	// perm is what the assistant may do without asking, as the presets of
 	// internal/settings name it.
 	perm string
+	// steps is how many turns one question may take, and seconds how long
+	// a command may run, as the dialog's number fields show them.
+	steps   float64
+	seconds float64
 	// extra is what the user adds to every prompt.
 	extra string
 	// voices are the personas the user wrote, after the built-in five.
@@ -132,6 +136,10 @@ func (a *app) openAISettings() {
 	c.kept = keys[c.protocol] != ""
 	c.key = ""
 	c.perm = a.settings.AI.Permission()
+	// The fields show what one question does now, defaults included, so
+	// that a number typed here is the one the next question uses.
+	c.steps = float64(a.steps())
+	c.seconds = a.commandTimeout().Seconds()
 	c.extra = a.settings.AI.SystemExtra
 	c.voices = append([]settings.Persona(nil), a.settings.AI.Personas...)
 	a.invalidate()
@@ -312,6 +320,8 @@ func (a *app) saveAISettings() {
 	s.AI.Protocol, s.AI.BaseURL = c.protocol, strings.TrimSpace(c.base)
 	s.AI.Model, s.AI.Models = model, c.models
 	s.AI.Permissions = c.perm
+	s.AI.MaxSteps = int(c.steps)
+	s.AI.CommandSeconds = int(c.seconds)
 	s.AI.SystemExtra = strings.TrimSpace(c.extra)
 	s.AI.Personas = voicesOf(c.voices)
 	s.Changed()
@@ -454,6 +464,7 @@ func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
 		ui.Column(c).Key("ai-conf-right").Grow(1).MinWidth(0).Gap(8).Children(func() {
 			a.aiConfModels(c, conf)
 			a.aiConfVoices(c, conf)
+			a.aiConfLimits(c, conf)
 		})
 	})
 }
@@ -688,6 +699,29 @@ func (a *app) aiConfPermissions(c *ui.Context, conf *aiSettings) {
 	if conf.perm == settings.PermFullAccess {
 		ui.Text(c, locales.AiConfPermissionRisk()).FontSize(11).TextColor(p.dangerText)
 	}
+}
+
+// aiConfLimits is how far one question goes: how many turns the assistant
+// may take before it stops, and how long a command it runs may take.
+// Neither is a way to make it work better, only to let it work longer.
+func (a *app) aiConfLimits(c *ui.Context, conf *aiSettings) {
+	ui.Column(c).Gap(6).Children(func() {
+		a.aiConfLimit(c, "ai-conf-steps", locales.AiConfSteps(), locales.AiConfStepsWhy(),
+			&conf.steps, 1, 500, 1)
+		a.aiConfLimit(c, "ai-conf-seconds", locales.AiConfCommandTimeout(), locales.AiConfCommandTimeoutWhy(),
+			&conf.seconds, 5, 1800, 30)
+	})
+}
+
+// aiConfLimit is a number the settings keep, the input that says it at the
+// right of its name, and the line under them that says what it means.
+func (a *app) aiConfLimit(c *ui.Context, key, label, why string, value *float64, lo, hi, step float64) {
+	p := a.pal
+	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, label).FontSize(12.5).TextColor(p.text).Grow(1).SingleLine()
+		ui.NumberInput(c.Key(key), value, lo, hi, step).Width(180)
+	})
+	ui.Text(c, why).FontSize(11).TextColor(p.faint).SingleLine()
 }
 
 // aiConfVoiceRow is one voice of the user's: what it is called, what it is

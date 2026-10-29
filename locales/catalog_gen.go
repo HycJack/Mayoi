@@ -546,6 +546,46 @@ func (msgs Messages) AiConfPermissionRisk() string {
 	return Catalog.Format(msgs.locale, "aiConfPermissionRisk", nil)
 }
 
+// AiConfSteps says "Steps per question"
+// in the language the app shows.
+func AiConfSteps() string { return In(i18n.Locale()).AiConfSteps() }
+
+// AiConfSteps says "Steps per question"
+// in the language of msgs.
+func (msgs Messages) AiConfSteps() string {
+	return Catalog.Format(msgs.locale, "aiConfSteps", nil)
+}
+
+// AiConfStepsWhy says "Turns of tools and answers before it stops; 60 by default."
+// in the language the app shows.
+func AiConfStepsWhy() string { return In(i18n.Locale()).AiConfStepsWhy() }
+
+// AiConfStepsWhy says "Turns of tools and answers before it stops; 60 by default."
+// in the language of msgs.
+func (msgs Messages) AiConfStepsWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfStepsWhy", nil)
+}
+
+// AiConfCommandTimeout says "Command timeout"
+// in the language the app shows.
+func AiConfCommandTimeout() string { return In(i18n.Locale()).AiConfCommandTimeout() }
+
+// AiConfCommandTimeout says "Command timeout"
+// in the language of msgs.
+func (msgs Messages) AiConfCommandTimeout() string {
+	return Catalog.Format(msgs.locale, "aiConfCommandTimeout", nil)
+}
+
+// AiConfCommandTimeoutWhy says "Seconds a command may run; 120 by default."
+// in the language the app shows.
+func AiConfCommandTimeoutWhy() string { return In(i18n.Locale()).AiConfCommandTimeoutWhy() }
+
+// AiConfCommandTimeoutWhy says "Seconds a command may run; 120 by default."
+// in the language of msgs.
+func (msgs Messages) AiConfCommandTimeoutWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfCommandTimeoutWhy", nil)
+}
+
 // AiAttach says "Attach a file"
 // in the language the app shows.
 func AiAttach() string { return In(i18n.Locale()).AiAttach() }
@@ -1108,14 +1148,14 @@ func (msgs Messages) AiStopped() string {
 	return Catalog.Format(msgs.locale, "aiStopped", nil)
 }
 
-// AiStepsOut says "It stopped after 24 steps. Ask again to go on."
+// AiStepsOut says "It stopped after {count, plural, one {# step} other {# steps}}. Ask again to go on."
 // in the language the app shows.
-func AiStepsOut() string { return In(i18n.Locale()).AiStepsOut() }
+func AiStepsOut(count int) string { return In(i18n.Locale()).AiStepsOut(count) }
 
-// AiStepsOut says "It stopped after 24 steps. Ask again to go on."
+// AiStepsOut says "It stopped after {count, plural, one {# step} other {# steps}}. Ask again to go on."
 // in the language of msgs.
-func (msgs Messages) AiStepsOut() string {
-	return Catalog.Format(msgs.locale, "aiStepsOut", nil)
+func (msgs Messages) AiStepsOut(count int) string {
+	return Catalog.Format(msgs.locale, "aiStepsOut", map[string]any{"count": count})
 }
 
 // AiTimedOut says "The AI took too long to answer. Try again."

@@ -55,8 +55,9 @@ type aiPanel struct {
 	// is none.
 	approval *aiApproval
 	// outOfSteps says the last run stopped at its cap, not because it
-	// was done.
+	// was done, and outAt is the cap it stopped at.
 	outOfSteps bool
+	outAt      int
 	// err is what the panel says of the last failure, ready to show.
 	err string
 	// shown says the panel has drawn itself once, so a window restored
@@ -220,6 +221,9 @@ func (a *app) send() {
 	// is said before they are handed over, so that the words of the
 	// question point at them by name.
 	before := len(p.history)
+	// The steps the settings allow are the ones this answer reports
+	// running out of, whichever the next answer is asked under.
+	steps := a.steps()
 	run := ai.Run{
 		Model:    model,
 		APIKey:   key,
@@ -228,6 +232,7 @@ func (a *app) send() {
 		Messages: p.history,
 		Tools:    append(tools.Sets(), a.aiOpenTool()),
 		Pictures: pictures(attached),
+		Steps:    steps,
 	}
 	loop := a.loop
 	bg.Go(func() {
@@ -243,7 +248,7 @@ func (a *app) send() {
 				p.msgs[last].text += s.Message
 				p.msgs[last].tools = append(p.msgs[last].tools, s.ToolCalls...)
 				if s.OutOfSteps {
-					p.outOfSteps = true
+					p.outOfSteps, p.outAt = true, steps
 				}
 			})
 		})
@@ -523,6 +528,9 @@ func (a *app) personaRow(c *ui.Context, p ai.Persona) {
 func (a *app) aiTools() *ai.Tools {
 	conf := a.settings.AI
 	t := &ai.Tools{Root: a.root}
+	// A command runs as long as the settings allow, under every
+	// permission that runs one at all.
+	sh := ai.ShFor(a.commandTimeout())
 	switch conf.Permission() {
 	case settings.PermReadOnly:
 		// Nothing to allow: the folder is read and searched, and that
@@ -530,14 +538,32 @@ func (a *app) aiTools() *ai.Tools {
 		t.ReadOnly = true
 	case settings.PermAsk:
 		t.Approve = a.askApproval
-		t.Exec = ai.Sh
+		t.Exec = sh
 	case settings.PermWorkspaceWrite:
 		t.Approve = a.askCommand
-		t.Exec = ai.Sh
+		t.Exec = sh
 	default:
-		t.Exec = ai.Sh
+		t.Exec = sh
 	}
 	return t
+}
+
+// steps is how many turns a question may take, as the settings say, and
+// ai.DefaultSteps when they say nothing.
+func (a *app) steps() int {
+	if n := a.settings.AI.MaxSteps; n > 0 {
+		return n
+	}
+	return ai.DefaultSteps
+}
+
+// commandTimeout is how long a command the assistant runs may take, as the
+// settings say seconds, and ai.DefaultCommandTimeout when they say nothing.
+func (a *app) commandTimeout() time.Duration {
+	if n := a.settings.AI.CommandSeconds; n > 0 {
+		return time.Duration(n) * time.Second
+	}
+	return ai.DefaultCommandTimeout
 }
 
 // askCommand shows a card before a command, and lets a write of the folder
@@ -892,7 +918,7 @@ func (a *app) aiTranscript(c *ui.Context) {
 			})
 		}
 		if ai.outOfSteps {
-			ui.Text(c, locales.AiStepsOut()).FontSize(11).TextColor(p.muted).Padding(6, 8)
+			ui.Text(c, locales.AiStepsOut(ai.outAt)).FontSize(11).TextColor(p.muted).Padding(6, 8)
 		}
 	})
 }
