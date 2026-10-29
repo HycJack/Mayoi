@@ -22,6 +22,7 @@ needs a `## <version>` section here, or its build fails.
 - A question may take 60 steps, not 24: `ai.maxSteps` or **Steps per question** in **AI Settings**.
 - A command the assistant runs has 120 seconds, not 60, and `ai.commandTimeout` says how many.
 - Updates come from this repository's releases, not from the repository Mayoi came from.
+- A model typed in **AI Settings** is kept by **Save**, and the dialog says which one answers.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
 - Each answer is kept in `ai-sessions/`, named after the first question: the list in the panel's head opens one.
 - **New Chat** in the panel's head starts another conversation, and the old one stays in the list.

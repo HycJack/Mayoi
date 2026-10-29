@@ -77,6 +77,7 @@
   "aiConfKeptIn": "会話は {folder} に保存します",
   "aiConfKeyWhy": "ai-keys.json に保存し、アカウントとは同期しません。",
   "aiConfKeep": "このモデルを残す",
+  "aiConfAnswersWith": "回答には {model} を使います",
   "aiConfModels": "モデル",
   "aiConfModelsWhy": "必要なモデルを残し、答えるものをクリックします。",
   "aiConfMore": "{count, plural, other {ほか # 件: 入力で絞り込めます}}",

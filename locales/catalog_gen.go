@@ -888,6 +888,16 @@ func (msgs Messages) AiConfKeep() string {
 	return Catalog.Format(msgs.locale, "aiConfKeep", nil)
 }
 
+// AiConfAnswersWith says "Answers with {model}"
+// in the language the app shows.
+func AiConfAnswersWith(model string) string { return In(i18n.Locale()).AiConfAnswersWith(model) }
+
+// AiConfAnswersWith says "Answers with {model}"
+// in the language of msgs.
+func (msgs Messages) AiConfAnswersWith(model string) string {
+	return Catalog.Format(msgs.locale, "aiConfAnswersWith", map[string]any{"model": model})
+}
+
 // AiConfModels says "Models"
 // in the language the app shows.
 func AiConfModels() string { return In(i18n.Locale()).AiConfModels() }

@@ -323,6 +323,7 @@
   "aiConfKeptIn": "Conversations are kept in {folder}",
   "aiConfKeyWhy": "Kept in ai-keys.json, which is not synced to your account.",
   "aiConfKeep": "Keep this model",
+  "aiConfAnswersWith": "Answers with {model}",
   "aiConfModels": "Models",
   "aiConfModelsWhy": "Keep what you need, then click the one that answers.",
   "aiConfMore": "{count, plural, one {# more: type to narrow the list} other {# more: type to narrow the list}}",

@@ -77,6 +77,7 @@
   "aiConfKeptIn": "对话记录保存在 {folder}",
   "aiConfKeyWhy": "保存在 ai-keys.json，不同步到账号。",
   "aiConfKeep": "保留这个模型",
+  "aiConfAnswersWith": "当前用 {model} 回答",
   "aiConfModels": "模型",
   "aiConfModelsWhy": "勾选需要的模型，再点一下用来回答的那个。",
   "aiConfMore": "{count, plural, other {还有 # 个：输入可缩小范围}}",

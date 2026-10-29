@@ -198,7 +198,8 @@ func (a *app) aiConfUse(model string) {
 }
 
 // aiConfAdd keeps the model the user typed: an endpoint may offer one it
-// does not list, and a proxy's names are the user's to know.
+// does not list, and a proxy's names are the user's to know. It goes to the
+// top of the list, so that a list of many models shows the one just added.
 func (a *app) aiConfAdd() {
 	c := &a.aiConf
 	model := strings.TrimSpace(c.typed)
@@ -206,7 +207,7 @@ func (a *app) aiConfAdd() {
 		return
 	}
 	if slicesIndex(c.listed, model) < 0 {
-		c.listed = append(c.listed, model)
+		c.listed = append([]string{model}, c.listed...)
 	}
 	a.aiConfUse(model)
 	c.typed = ""
@@ -292,6 +293,15 @@ func (a *app) saveAISettings() {
 	if c.protocol != ai.OpenAI && c.protocol != ai.Anthropic {
 		c.err = locales.AiConfNoProtocol()
 		return
+	}
+	// A name typed but not kept with Enter is kept here: typing a model and
+	// pressing Save is how one gets in, and dropping it there would lose it
+	// without a word.
+	if typed := strings.TrimSpace(c.typed); typed != "" {
+		if slicesIndex(c.models, typed) < 0 {
+			c.models = append(c.models, typed)
+		}
+		c.model = typed
 	}
 	model := c.model
 	if model == "" && len(c.models) > 0 {
@@ -579,12 +589,13 @@ func (a *app) aiConfModels(c *ui.Context, conf *aiSettings) {
 	if len(shown) == 0 {
 		ui.Text(c, locales.AiConfNoModels()).FontSize(11.5).TextColor(p.faint).SingleLine()
 	}
-	// And a name of the user's own, for a model the endpoint did not think
+	// A name of the user's own, for a model the endpoint did not think
 	// to list: Enter keeps it, and so does the button, which also takes
 	// the keyboard to the field when there is nothing in it to keep.
 	ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 		field := a.textKeys(ui.TextInputBase(c.Key("ai-conf-model"), &conf.typed)).FontSize(12).
-			Placeholder(locales.AiConfModelPlaceholder()).Label(locales.AiConfModelType()).Grow(1).MinWidth(0)
+			Placeholder(locales.AiConfModelPlaceholder()).Label(locales.AiConfModelPlaceholder()).
+			Grow(1).MinWidth(0)
 		if field.Submitted() {
 			a.post(a.aiConfAdd)
 		}
@@ -606,6 +617,11 @@ func (a *app) aiConfModels(c *ui.Context, conf *aiSettings) {
 			}
 		}
 	})
+	// Which model answers, said under the field: a list of many models
+	// scrolls, and the one just typed in need not be of the rows in view.
+	if conf.model != "" {
+		ui.Text(c, locales.AiConfAnswersWith(conf.model)).FontSize(11).TextColor(p.faint).SingleLine()
+	}
 }
 
 // aiConfVoices is the voices the user wrote, each a name and what it is
