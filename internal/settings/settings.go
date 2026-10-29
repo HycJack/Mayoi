@@ -241,6 +241,9 @@ type AISettings struct {
 	// CommandSeconds is how long a command the assistant runs may take,
 	// in seconds, 0 for ai.DefaultCommandTimeout.
 	CommandSeconds int `json:"commandTimeout,omitempty"`
+	// Allowed are the programs whose commands run without a card, by
+	// name, as in "go" and "git": the user said they trust them once.
+	Allowed []string `json:"allowedCommands,omitempty"`
 	// ApproveEdits writes what the assistant asks without a card, as the
 	// user asked once and for all. Permissions replaces it, and it is
 	// read alone to turn an older settings file into one.

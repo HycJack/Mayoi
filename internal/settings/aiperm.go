@@ -1,5 +1,7 @@
 package settings
 
+import "strings"
+
 // The permissions of the assistant: what it may do in the folder without
 // asking. They are the presets of a coding agent that changes files and
 // runs commands, and each says what the user is asked before.
@@ -53,6 +55,35 @@ func (s AISettings) Permission() string {
 
 // Writes reports whether the permission lets the assistant change files.
 func (s AISettings) Writes() bool { return s.Permission() != PermReadOnly }
+
+// Runs reports whether the permission lets the assistant run commands.
+func (s AISettings) Runs() bool { return s.Permission() != PermReadOnly }
+
+// Allows reports whether the user trusts the program named, so that its
+// commands run without a card.
+func (s AISettings) Allows(program string) bool {
+	for _, allowed := range s.Allowed {
+		if strings.EqualFold(allowed, program) {
+			return true
+		}
+	}
+	return false
+}
+
+// Allow trusts a program: its commands run without a card from the next on.
+func (s *AISettings) Allow(program string) {
+	program = strings.ToLower(strings.TrimSpace(program))
+	if program == "" || s.Allows(program) {
+		return
+	}
+	// In the order they were allowed, since the settings file is read by
+	// people too.
+	s.Allowed = append(s.Allowed, program)
+}
+
+// ForgetAllowed stops trusting every program, so that the next command
+// asks again.
+func (s *AISettings) ForgetAllowed() { s.Allowed = nil }
 
 // settled turns a settings file of before the presets into one of them:
 // the two settings it replaces say what the permission is, and are written

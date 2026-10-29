@@ -715,6 +715,27 @@ func (a *app) aiConfPermissions(c *ui.Context, conf *aiSettings) {
 	if conf.perm == settings.PermFullAccess {
 		ui.Text(c, locales.AiConfPermissionRisk()).FontSize(11).TextColor(p.dangerText)
 	}
+	// The programs the user allowed from a card, which run without one:
+	// the way back to a card for each is here, since a card is where they
+	// were allowed.
+	if allowed := a.settings.AI.Allowed; len(allowed) > 0 && conf.perm != settings.PermReadOnly {
+		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, locales.AiConfAllowed(strings.Join(allowed, ", "))).FontSize(11).
+				TextColor(p.faint).Grow(1).MinWidth(0).SingleLine()
+			again := ui.Button(c, locales.AiConfForgetAllowed()).FontSize(11).Padding(2, 6).Shrink(0)
+			if again.Clicked() {
+				a.post(a.forgetAllowed)
+			}
+		})
+	}
+}
+
+// forgetAllowed stops trusting every program, so that the next command
+// shows a card again.
+func (a *app) forgetAllowed() {
+	a.settings.AI.ForgetAllowed()
+	a.settings.Changed()
+	a.invalidate()
 }
 
 // aiConfLimits is how far one question goes: how many turns the assistant

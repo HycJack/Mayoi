@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"mayoi/internal/ai"
 	"mayoi/internal/settings"
 	"mayoi/locales"
 
@@ -207,5 +208,80 @@ func TestAReadOnlyFolderGivesNoWriteTools(t *testing.T) {
 		case "write", "edit", "bash":
 			t.Errorf("a read-only folder gives the tool %q", tool.Name)
 		}
+	}
+}
+
+// TestAnAllowedProgramRunsWithoutACard: once the user allows a program from
+// a card, its commands run by themselves, and the ones that run another
+// program still ask.
+func TestAnAllowedProgramRunsWithoutACard(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.settings.AI.Permissions = settings.PermWorkspaceWrite
+	a.settings.AI.Allowed = []string{"go"}
+	if !a.askCommand(ai.Change{Command: "go build ./..."}) {
+		t.Error("a command of an allowed program asked")
+	}
+	if !a.askCommand(ai.Change{Command: "cd internal && go test ./..."}) {
+		t.Error("a command of an allowed program, after cd, asked")
+	}
+	// Another program is another decision, and the card is shown: nothing
+	// answers it here, so the answer is what the panel says of a card.
+	a.settings.AI.Permissions = settings.PermAsk
+	if a.trusted("go test && rm -rf out") {
+		t.Error("a command that also runs rm is trusted")
+	}
+	if a.trusted("rm -rf out") {
+		t.Error("a command of a program never allowed is trusted")
+	}
+}
+
+// TestTheCardAllowsTheProgramItRuns: the card before a command trusts the
+// program for good, and answers the command it was shown for.
+func TestTheCardAllowsTheProgramItRuns(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.settings.AI.Permissions = settings.PermAsk
+	a.toggleAI()
+	card := &aiApproval{change: ai.Change{Command: "go build ./..."}, reply: make(chan bool, 1)}
+	a.ai.approval = card
+	hs.settle()
+	hs.tt.Click(locales.AiAlwaysAllow("go"))
+	hs.settle()
+	if !a.settings.AI.Allows("go") {
+		t.Error("the program was not allowed")
+	}
+	if a.ai.approval != nil {
+		t.Error("the card stayed up")
+	}
+	select {
+	case ok := <-card.reply:
+		if !ok {
+			t.Error("the command was refused")
+		}
+	default:
+		t.Error("the command was not answered")
+	}
+}
+
+// TestTheCardOfAWriteAllowsEdits: the card before a write can free the
+// writes of this folder, which is the permission that has no card for them.
+func TestTheCardOfAWriteAllowsEdits(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	a.settings.AI.Permissions = settings.PermAsk
+	a.toggleAI()
+	card := &aiApproval{change: ai.Change{Path: "main.go", After: []byte("package main\n")}, reply: make(chan bool, 1)}
+	a.ai.approval = card
+	hs.settle()
+	hs.tt.Click(locales.AiAlwaysAllowEdits())
+	hs.settle()
+	if got := a.settings.AI.Permission(); got != settings.PermWorkspaceWrite {
+		t.Errorf("the permission is %q", got)
+	}
+	// The next write of the same run does not ask: the permission is read
+	// when the card would be shown.
+	if !a.askApproval(ai.Change{Path: "other.go", After: []byte("package main\n")}) {
+		t.Error("a write asked after edits were allowed")
 	}
 }

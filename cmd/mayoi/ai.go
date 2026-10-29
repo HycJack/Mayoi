@@ -566,15 +566,48 @@ func (a *app) commandTimeout() time.Duration {
 	return ai.DefaultCommandTimeout
 }
 
-// askCommand shows a card before a command, and lets a write of the folder
-// through: the folder is the one the user opened, and its files are theirs
-// to have changed. Mayoi runs no command in a sandbox, so a command is
-// always the user's to allow.
+// askCommand shows a card before a command the user has not trusted, and
+// lets a write of the folder through: the folder is the one the user
+// opened, and its files are theirs to have changed. Mayoi runs no command
+// in a sandbox, so a command is the user's to allow, unless every program
+// it runs is one they allowed from an earlier card.
 func (a *app) askCommand(c ai.Change) bool {
 	if c.Command == "" {
 		return true
 	}
+	if a.trusted(c.Command) {
+		return true
+	}
 	return a.askApproval(c)
+}
+
+// trusted says the programs a command runs are all ones the user allowed,
+// so that the command runs without a card.
+func (a *app) trusted(command string) bool {
+	programs := ai.CommandPrograms(command)
+	if len(programs) == 0 {
+		return false
+	}
+	for _, program := range programs {
+		if !a.settings.AI.Allows(program) {
+			return false
+		}
+	}
+	return true
+}
+
+// allowProgram trusts a program from a card: its commands run without one
+// from the next on, this one included.
+func (a *app) allowProgram(program string) {
+	a.settings.AI.Allow(program)
+	a.settings.Changed()
+	a.invalidate()
+}
+
+// allowEdits turns the card before a write into the permission that writes
+// without one: the user said the folder is theirs to have changed.
+func (a *app) allowEdits() {
+	a.setPermission(settings.PermWorkspaceWrite)
 }
 
 // aiOpenParams is what open_file is asked: the file, and its line.
@@ -621,6 +654,18 @@ func told(err error) agent.AgentToolResult {
 // channel of this call, so a second card replacing it on screen can never
 // answer this one, nor be answered by its rejection.
 func (a *app) askApproval(c ai.Change) bool {
+	// The permission is read now, not when the run started: a card
+	// answered with "allow all edits" frees the next write of this turn,
+	// and a program trusted from a card frees its commands wherever they
+	// are asked from.
+	if c.Command == "" {
+		switch a.settings.AI.Permission() {
+		case settings.PermWorkspaceWrite, settings.PermFullAccess:
+			return true
+		}
+	} else if a.trusted(c.Command) {
+		return true
+	}
 	card := &aiApproval{change: c, reply: make(chan bool, 1)}
 	a.post(func() {
 		a.ai.approval = card
@@ -955,6 +1000,32 @@ func (a *app) aiApprovalCard(c *ui.Context) {
 				}
 			})
 		}
+		// The card may end what it asks for good: a command of a program
+		// the user trusts, or edits of the folder without a card.
+		ui.Row(c).Justify(ui.Start).Children(func() {
+			if ap.change.Command != "" {
+				if programs := ai.CommandPrograms(ap.change.Command); len(programs) > 0 && !a.trusted(ap.change.Command) {
+					always := ui.Button(c, locales.AiAlwaysAllow(programs[0]))
+					always.FontSize(11.5).Padding(4, 8).TextColor(p.muted)
+					if always.Clicked() {
+						program := programs[0]
+						a.post(func() {
+							a.allowProgram(program)
+							a.answered(true)
+						})
+					}
+				}
+			} else {
+				always := ui.Button(c, locales.AiAlwaysAllowEdits())
+				always.FontSize(11.5).Padding(4, 8).TextColor(p.muted)
+				if always.Clicked() {
+					a.post(func() {
+						a.allowEdits()
+						a.answered(true)
+					})
+				}
+			}
+		})
 		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 			reject := ui.Button(c, locales.AiReject())
 			reject.FontSize(12).Padding(6, 8)

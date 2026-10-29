@@ -296,6 +296,26 @@ func (msgs Messages) AgoYears(count int) string {
 	return Catalog.Format(msgs.locale, "agoYears", map[string]any{"count": count})
 }
 
+// AiAlwaysAllow says "Always allow {program}"
+// in the language the app shows.
+func AiAlwaysAllow(program string) string { return In(i18n.Locale()).AiAlwaysAllow(program) }
+
+// AiAlwaysAllow says "Always allow {program}"
+// in the language of msgs.
+func (msgs Messages) AiAlwaysAllow(program string) string {
+	return Catalog.Format(msgs.locale, "aiAlwaysAllow", map[string]any{"program": program})
+}
+
+// AiAlwaysAllowEdits says "Always allow edits"
+// in the language the app shows.
+func AiAlwaysAllowEdits() string { return In(i18n.Locale()).AiAlwaysAllowEdits() }
+
+// AiAlwaysAllowEdits says "Always allow edits"
+// in the language of msgs.
+func (msgs Messages) AiAlwaysAllowEdits() string {
+	return Catalog.Format(msgs.locale, "aiAlwaysAllowEdits", nil)
+}
+
 // AiApprove says "Approve"
 // in the language the app shows.
 func AiApprove() string { return In(i18n.Locale()).AiApprove() }
@@ -514,6 +534,26 @@ func AiConfDrop() string { return In(i18n.Locale()).AiConfDrop() }
 // in the language of msgs.
 func (msgs Messages) AiConfDrop() string {
 	return Catalog.Format(msgs.locale, "aiConfDrop", nil)
+}
+
+// AiConfAllowed says "Commands that run without asking: {programs}"
+// in the language the app shows.
+func AiConfAllowed(programs string) string { return In(i18n.Locale()).AiConfAllowed(programs) }
+
+// AiConfAllowed says "Commands that run without asking: {programs}"
+// in the language of msgs.
+func (msgs Messages) AiConfAllowed(programs string) string {
+	return Catalog.Format(msgs.locale, "aiConfAllowed", map[string]any{"programs": programs})
+}
+
+// AiConfForgetAllowed says "Ask again"
+// in the language the app shows.
+func AiConfForgetAllowed() string { return In(i18n.Locale()).AiConfForgetAllowed() }
+
+// AiConfForgetAllowed says "Ask again"
+// in the language of msgs.
+func (msgs Messages) AiConfForgetAllowed() string {
+	return Catalog.Format(msgs.locale, "aiConfForgetAllowed", nil)
 }
 
 // AiConfPermissions says "Permissions"
