@@ -29,6 +29,10 @@ type Tools struct {
 	// Exec runs a command in the folder, nil when commands are not
 	// allowed, and then bash is not offered at all.
 	Exec func(ctx context.Context, dir, command string) (string, error)
+	// ReadOnly offers the tools that read the folder alone, as a folder
+	// the assistant may look at and not touch: nothing asks, because
+	// nothing it can do needs to.
+	ReadOnly bool
 
 	mu      sync.Mutex
 	written []string
@@ -51,7 +55,11 @@ func (t *Tools) kept(path string) {
 // Sets is every tool the folder allows: the ones that read it, the ones
 // that write it, and the command runner when there is one.
 func (t *Tools) Sets() []agent.AgentTool {
-	tools := append(t.ReadSet(), t.WriteSet()...)
+	tools := t.ReadSet()
+	if t.ReadOnly {
+		return tools
+	}
+	tools = append(tools, t.WriteSet()...)
 	if t.Exec == nil {
 		return tools
 	}

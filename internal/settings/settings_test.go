@@ -55,6 +55,34 @@ func TestMigrateTheLayout(t *testing.T) {
 	}
 }
 
+// The two checkboxes of before the presets become the permission they
+// meant, once, and the file stops holding them.
+func TestMigrateThePermission(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		file string
+		want string
+	}{
+		{"edits and commands", `{"approveEdits": true, "allowBash": true}`, PermFullAccess},
+		{"edits alone", `{"approveEdits": true}`, PermWorkspaceWrite},
+		{"neither", `{}`, PermAsk},
+		{"read only", `{"permissions": "read-only"}`, PermReadOnly},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "settings.json")
+			os.WriteFile(path, []byte(`{"ai": `+tc.file+`}`), 0o644)
+			s := Load(path)
+			if got := s.AI.Permission(); got != tc.want {
+				t.Fatalf("the permission is %q, not %q", got, tc.want)
+			}
+			_, file := s.Encode()
+			if strings.Contains(string(file), "approveEdits") || strings.Contains(string(file), "allowBash") {
+				t.Errorf("the settings file still holds the checkboxes: %s", file)
+			}
+		})
+	}
+}
+
 // The window of a version with one, and the tabs of one without columns,
 // become the first window.
 func TestMigrateTheWindow(t *testing.T) {

@@ -230,11 +230,17 @@ type AISettings struct {
 	// Personas are the voices the user wrote, after the ones that come
 	// with Mayoi.
 	Personas []Persona `json:"personas,omitempty"`
+	// Permissions is what the assistant may do in the folder without
+	// asking: ai.PermReadOnly, ai.PermAsk, ai.PermWorkspaceWrite or
+	// ai.PermFullAccess. Empty means ai.PermAsk, or what the two
+	// settings it replaces say.
+	Permissions string `json:"permissions,omitempty"`
 	// ApproveEdits writes what the assistant asks without a card, as the
-	// user asked once and for all.
+	// user asked once and for all. Permissions replaces it, and it is
+	// read alone to turn an older settings file into one.
 	ApproveEdits bool `json:"approveEdits,omitempty"`
 	// AllowBash lets the assistant run commands in the folder, each one
-	// approved first unless ApproveEdits is set.
+	// approved first unless ApproveEdits is set. Permissions replaces it.
 	AllowBash bool `json:"allowBash,omitempty"`
 	// SystemExtra is what the user adds to every prompt, whatever voice
 	// answers.
@@ -494,6 +500,7 @@ func Load(path string) *Settings {
 	if old.DiffSplit && s.DiffLayout == "" {
 		s.DiffLayout = "split"
 	}
+	s.AI.settled()
 	s.normalize()
 	if moved {
 		s.migrate(old)

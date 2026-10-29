@@ -12,7 +12,13 @@ needs a `## <version>` section here, or its build fails.
 - An answer's copy button puts its Markdown on the clipboard, and a drag over it copies what it covers.
 - The assistant reads, searches and edits the folder, and opens the file it explains at its line.
 - A write comes as a card with the changed lines: **Approve** writes them, **Reject** sends them back.
-- `ai.approveEdits` writes without asking first, and `ai.allowBash` lets the assistant run commands, each approved.
+- The field takes files with the question: a picture is shown to the model, and a file of text is read.
+- The paperclip at its left adds up to six files, and a chip above the field takes any of them back off.
+- `ai.permissions` says what the assistant may do without asking, as one of four presets.
+- **Read only** reads and searches; **Ask every time** shows a card before each edit and command.
+- **Edit this folder** writes without a card and still asks before a command; **Full access** asks nothing.
+- The permission is picked in **AI Settings** or under the question, and **Full access** asks before it is given.
+- `ai.approveEdits` and `ai.allowBash` of an older `settings.json` become the preset they meant.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
 - Each answer is kept in `ai-sessions/`, named after the first question: the list in the panel's head opens one.
 - **New Chat** in the panel's head starts another conversation, and the old one stays in the list.

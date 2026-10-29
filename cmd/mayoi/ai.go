@@ -11,6 +11,7 @@ import (
 
 	"mayoi/internal/ai"
 	"mayoi/internal/bg"
+	"mayoi/internal/settings"
 	"mayoi/locales"
 
 	piai "github.com/HycJack/pi-ai-go"
@@ -76,6 +77,13 @@ type aiPanel struct {
 	listed []ai.Chat
 	// menu says the list of voices is open.
 	menu bool
+	// perms says the list of permissions is open, and permAsk the one the
+	// user is being asked to allow, which full access alone needs.
+	perms   bool
+	permAsk string
+	// attached are the files the next question comes with, which leave the
+	// field with it.
+	attached []aiAttachment
 }
 
 // aiMessage is a message of the conversation: whose it is, "user" or
@@ -87,6 +95,9 @@ type aiMessage struct {
 	stopped bool
 	// tools are the tools the assistant called while saying it.
 	tools []string
+	// files are what a question came with: the names of the files the
+	// user attached, which the panel shows under it.
+	files []string
 	// md is the answer's text as Markdown, parsed again when the text
 	// changes, as every delta of an answer changes it; mdText is the text
 	// it was parsed from.
@@ -174,7 +185,7 @@ func (a *app) toggleAI() {
 func (a *app) send() {
 	p := &a.ai
 	text := strings.TrimSpace(p.prompt)
-	if text == "" || p.writing != nil {
+	if (text == "" && len(p.attached) == 0) || p.writing != nil {
 		return
 	}
 	model, key, err := a.target()
@@ -183,10 +194,13 @@ func (a *app) send() {
 		a.invalidate()
 		return
 	}
-	p.prompt, p.err = "", ""
+	// The question takes the files with it: they leave the field whether
+	// the run answers or not.
+	attached := p.attached
+	p.prompt, p.err, p.attached = "", "", nil
 	// The keyboard comes back to the field once the answer is under way.
 	p.keyed.Focus()
-	p.msgs = append(p.msgs, aiMessage{role: "user", text: text})
+	p.msgs = append(p.msgs, aiMessage{role: "user", text: text, files: attachmentNames(attached)})
 	answer := aiMessage{role: "assistant"}
 	p.msgs = append(p.msgs, answer)
 	// last stays the answer's place: the conversation only grows, so a
@@ -202,15 +216,18 @@ func (a *app) send() {
 	p.runCancel, p.runDone = cancel, done
 	tools := a.aiTools()
 	// The question is not in the messages: the run adds it, and the run
-	// that follows this one takes it from the history.
+	// that follows this one takes it from the history. What the files are
+	// is said before they are handed over, so that the words of the
+	// question point at them by name.
 	before := len(p.history)
 	run := ai.Run{
 		Model:    model,
 		APIKey:   key,
 		System:   ai.SystemFor(a.persona(), aiChatSystem, a.settings.AI.SystemExtra, ai.Memory(a.root)),
-		Prompt:   text + "\n\n" + ai.Env(a.root, a.aiOpenPath()),
+		Prompt:   text + a.filesNote(attached) + "\n\n" + ai.Env(a.root, a.aiOpenPath()),
 		Messages: p.history,
 		Tools:    append(tools.Sets(), a.aiOpenTool()),
+		Pictures: pictures(attached),
 	}
 	loop := a.loop
 	bg.Go(func() {
@@ -289,7 +306,9 @@ func (a *app) keepChat(model piai.Model, key string) {
 		p.title = aiTitleOf(p.msgs)
 	}
 	sessions := ai.Sessions{Dir: a.settings.SessionsPath()}
-	id, err := sessions.Save(p.chat, p.title, p.history)
+	// A picture is megabytes of base64, and a chat read again pages later
+	// is read for what was said: the question names it instead.
+	id, err := sessions.Save(p.chat, p.title, ai.WithoutPictures(p.history))
 	if err != nil {
 		// The conversation stays in the panel: a chat that cannot be
 		// written is still a chat.
@@ -426,7 +445,7 @@ func (a *app) aiOpenPath() string {
 // time: the other closes, and the voice chosen does not decide this one.
 func (a *app) togglePersonas() {
 	a.ai.menu = !a.ai.menu
-	a.ai.chats = false
+	a.ai.chats, a.ai.perms = false, false
 	a.invalidate()
 }
 
@@ -497,17 +516,39 @@ func (a *app) personaRow(c *ui.Context, p ai.Persona) {
 }
 
 // aiTools are the assistant's tools, rooted at the window's folder, with
-// the panel asked before each write and, when the user allowed commands,
-// each one of those too.
+// the panel asked before what the permission says it asks before: a card
+// for a write and for a command under "ask", for a command alone under
+// "workspace-write", and for nothing under "full access", which reads too
+// when the folder is one to only look at.
 func (a *app) aiTools() *ai.Tools {
+	conf := a.settings.AI
 	t := &ai.Tools{Root: a.root}
-	if !a.settings.AI.ApproveEdits {
+	switch conf.Permission() {
+	case settings.PermReadOnly:
+		// Nothing to allow: the folder is read and searched, and that
+		// alone.
+		t.ReadOnly = true
+	case settings.PermAsk:
 		t.Approve = a.askApproval
-	}
-	if a.settings.AI.AllowBash {
+		t.Exec = ai.Sh
+	case settings.PermWorkspaceWrite:
+		t.Approve = a.askCommand
+		t.Exec = ai.Sh
+	default:
 		t.Exec = ai.Sh
 	}
 	return t
+}
+
+// askCommand shows a card before a command, and lets a write of the folder
+// through: the folder is the one the user opened, and its files are theirs
+// to have changed. Mayoi runs no command in a sandbox, so a command is
+// always the user's to allow.
+func (a *app) askCommand(c ai.Change) bool {
+	if c.Command == "" {
+		return true
+	}
+	return a.askApproval(c)
 }
 
 // aiOpenParams is what open_file is asked: the file, and its line.
@@ -696,6 +737,8 @@ func (a *app) aiSidePanel(c *ui.Context) {
 	})
 	a.aiChatListView(c)
 	a.personaMenu(c)
+	a.aiPermissionMenu(c)
+	a.aiPermissionConfirm(c)
 }
 
 // aiTitleRow is the head of the assistant's panel: its name, the new
@@ -729,7 +772,7 @@ func (a *app) aiTitleRow(c *ui.Context) {
 func (a *app) toggleChats() {
 	p := &a.ai
 	p.chats = !p.chats
-	p.menu = false
+	p.menu, p.perms = false, false
 	p.listed = nil
 	a.invalidate()
 	if !p.chats {
@@ -839,6 +882,9 @@ func (a *app) aiTranscript(c *ui.Context) {
 				case msg.text != "":
 					a.answerView(c, msg, width)
 				}
+				if len(msg.files) > 0 {
+					a.aiMessageFiles(c, msg.files)
+				}
 				if len(msg.tools) > 0 {
 					ui.Text(c, locales.AiToolRan(strings.Join(msg.tools, ", "))).FontSize(11).
 						TextColor(p.faint).SingleLine()
@@ -934,17 +980,22 @@ func linesOf(b []byte) []string {
 	return strings.Split(s, "\n")
 }
 
-// aiCompose is the field what is asked is typed in.
+// aiCompose is the field a question is written in, with the files it comes
+// with above it and the permission it is asked under at its right.
 func (a *app) aiCompose(c *ui.Context) {
 	p := a.pal
 	ai := &a.ai
+	a.aiAttachments(c)
 	field := ui.Row(c.Key("ai-compose")).Height(30).Padding(0, 4, 0, 10).Gap(2).AlignItems(ui.Center).
 		Background(p.editor).BorderWidth(1, 0, 0, 0).BorderColor(p.border).Transition(fieldFocus)
 	field.Children(func() {
 		placeholder := locales.AiPlaceholder()
 		// A list over the panel has the keyboard: what is typed is not a
 		// question, and Escape closes the list.
-		veiled := ai.chats || ai.menu
+		veiled := ai.chats || ai.menu || ai.perms
+		if a.iconButton(c, iconPaperclip, locales.AiAttach(), false).Clicked() {
+			a.post(a.attachFiles)
+		}
 		in := a.textKeys(ui.TextInputBase(c.Key("ai-input"), &ai.prompt)).Grow(1).MinWidth(0).
 			FontSize(12.5).Placeholder(placeholder).Label(placeholder).Disabled(veiled)
 		in.Bind(&ai.keyed)
@@ -955,7 +1006,109 @@ func (a *app) aiCompose(c *ui.Context) {
 		if in.Submitted() {
 			a.post(a.send)
 		}
+		a.aiPermissionButton(c)
 	})
+}
+
+// aiAttachments is what the next question comes with, each file a chip
+// that says what it is and a way to be rid of it.
+func (a *app) aiAttachments(c *ui.Context) {
+	ai := &a.ai
+	if len(ai.attached) == 0 {
+		return
+	}
+	p := a.pal
+	ui.Row(c.Key("ai-attached")).Padding(4, 6, 0, 10).Gap(4).AlignItems(ui.Center).Wrap().
+		Background(p.editor).Children(func() {
+		for i := range ai.attached {
+			a.aiAttachmentChip(c, i)
+		}
+	})
+}
+
+// aiAttachmentChip is one file of the question, as it is called and with
+// the way to take it back off.
+func (a *app) aiAttachmentChip(c *ui.Context, i int) {
+	p := a.pal
+	att := &a.ai.attached[i]
+	ui.Row(c.Key("ai-attach-"+strconv.Itoa(i))).Padding(1, 2, 1, 4).Gap(4).Radius(4).
+		AlignItems(ui.Center).Background(p.surfaceHover).Children(func() {
+		icon := iconFileText
+		if att.Picture {
+			icon = iconImage
+		}
+		ui.Icon(c, icon).FontSize(10).TextColor(p.muted)
+		ui.Text(c, att.Name).FontSize(10.5).TextColor(p.muted).SingleLine()
+		if ui.Button(c, "×").FontSize(10).Padding(0, 2).Clicked() {
+			a.post(func() {
+				attached := a.ai.attached
+				a.ai.attached = append(attached[:i:i], attached[i+1:]...)
+				a.invalidate()
+			})
+		}
+	})
+}
+
+// aiMessageFiles is what a question came with, under it: the names of its
+// files, each a chip that says which kind it was.
+func (a *app) aiMessageFiles(c *ui.Context, files []string) {
+	p := a.pal
+	ui.Row(c).Gap(4).Wrap().Children(func() {
+		for i, name := range files {
+			ui.Row(c.Key("ai-msg-file-"+strconv.Itoa(i))).Padding(1, 4).Gap(4).Radius(4).
+				AlignItems(ui.Center).Background(p.surfaceHover).Children(func() {
+				ui.Icon(c, iconFileText).FontSize(10).TextColor(p.muted)
+				ui.Text(c, name).FontSize(10.5).TextColor(p.muted).SingleLine()
+			})
+		}
+	})
+}
+
+// attachFiles asks for the files the next question comes with, starting in
+// the folder the assistant reads.
+func (a *app) attachFiles() {
+	if len(a.ai.attached) >= maxAttached {
+		a.tell(note{message: locales.AiAttachFull(strconv.Itoa(maxAttached))})
+		return
+	}
+	a.host.choosePaths(locales.AiAttach(), locales.AiAttachOpen(), a.root, false, func(paths []string) {
+		if len(paths) == 0 {
+			return
+		}
+		a.post(func() { a.attachPaths(paths) })
+	})
+}
+
+// attachPaths keeps the files chosen with the question, reading them where
+// they are: a picture is shown, a file of text is read.
+func (a *app) attachPaths(paths []string) {
+	p := &a.ai
+	for _, path := range paths {
+		if len(p.attached) >= maxAttached {
+			a.tell(note{message: locales.AiAttachFull(strconv.Itoa(maxAttached))})
+			break
+		}
+		if slicesContain(p.attached, path) {
+			continue
+		}
+		att, err := readAttachment(path)
+		if err != nil {
+			a.tell(note{message: a.aiSaid(err)})
+			continue
+		}
+		p.attached = append(p.attached, att)
+	}
+	a.invalidate()
+}
+
+// slicesContain reports whether a question already comes with path.
+func slicesContain(attached []aiAttachment, path string) bool {
+	for _, att := range attached {
+		if att.Path == path {
+			return true
+		}
+	}
+	return false
 }
 
 // aiRoleName is whose message a role is, in words.

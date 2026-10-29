@@ -42,9 +42,9 @@ type aiSettings struct {
 	fetch    string
 	failed   bool
 	fetching bool
-	// approve writes without asking, and bash lets it run commands.
-	approve bool
-	bash    bool
+	// perm is what the assistant may do without asking, as the presets of
+	// internal/settings name it.
+	perm string
 	// extra is what the user adds to every prompt.
 	extra string
 	// voices are the personas the user wrote, after the built-in five.
@@ -131,7 +131,7 @@ func (a *app) openAISettings() {
 	}
 	c.kept = keys[c.protocol] != ""
 	c.key = ""
-	c.approve, c.bash = a.settings.AI.ApproveEdits, a.settings.AI.AllowBash
+	c.perm = a.settings.AI.Permission()
 	c.extra = a.settings.AI.SystemExtra
 	c.voices = append([]settings.Persona(nil), a.settings.AI.Personas...)
 	a.invalidate()
@@ -311,7 +311,7 @@ func (a *app) saveAISettings() {
 	s := a.settings
 	s.AI.Protocol, s.AI.BaseURL = c.protocol, strings.TrimSpace(c.base)
 	s.AI.Model, s.AI.Models = model, c.models
-	s.AI.ApproveEdits, s.AI.AllowBash = c.approve, c.bash
+	s.AI.Permissions = c.perm
 	s.AI.SystemExtra = strings.TrimSpace(c.extra)
 	s.AI.Personas = voicesOf(c.voices)
 	s.Changed()
@@ -448,8 +448,7 @@ func (a *app) aiConfFields(c *ui.Context, conf *aiSettings) {
 	ui.Row(c).Gap(22).AlignItems(ui.Start).Children(func() {
 		ui.Column(c).Key("ai-conf-left").Grow(1).MinWidth(0).Gap(8).Children(func() {
 			a.aiConfEndpoint(c, conf)
-			a.aiConfCheck(c, &conf.approve, locales.AiConfApprove(), locales.AiConfApproveWhy())
-			a.aiConfCheck(c, &conf.bash, locales.AiConfBash(), locales.AiConfBashWhy())
+			a.aiConfPermissions(c, conf)
 			a.aiConfExtra(c, conf)
 		})
 		ui.Column(c).Key("ai-conf-right").Grow(1).MinWidth(0).Gap(8).Children(func() {
@@ -669,13 +668,26 @@ func (a *app) aiConfLabelWhy(c *ui.Context, label, why string) {
 	})
 }
 
-// aiConfCheck is a setting that is on or off, with the line under it that
-// says what it means: the column of fields is too narrow for one line.
-func (a *app) aiConfCheck(c *ui.Context, on *bool, label, why string) {
-	ui.Column(c).Gap(2).Children(func() {
-		ui.Checkbox(c, on, label).FontSize(12.5)
-		ui.Text(c, why).FontSize(11).TextColor(a.pal.faint).SingleLine()
+// aiConfPermissions is what the assistant may do in the folder without
+// asking, as the presets it is chosen from: the one in use is marked, and
+// the one that asks for nothing says what it costs.
+func (a *app) aiConfPermissions(c *ui.Context, conf *aiSettings) {
+	p := a.pal
+	a.aiConfLabelWhy(c, locales.AiConfPermissions(), locales.AiConfPermissionsWhy())
+	ui.Column(c).Key("ai-conf-perms").Gap(1).Children(func() {
+		for _, perm := range settings.Permissions() {
+			name := perm
+			a.aiPermissionRow(c, conf.perm, name, func() {
+				a.post(func() {
+					conf.perm = name
+					a.invalidate()
+				})
+			})
+		}
 	})
+	if conf.perm == settings.PermFullAccess {
+		ui.Text(c, locales.AiConfPermissionRisk()).FontSize(11).TextColor(p.dangerText)
+	}
 }
 
 // aiConfVoiceRow is one voice of the user's: what it is called, what it is

@@ -486,26 +486,6 @@ func (msgs Messages) AiConfAddVoice() string {
 	return Catalog.Format(msgs.locale, "aiConfAddVoice", nil)
 }
 
-// AiConfApprove says "Approve each edit"
-// in the language the app shows.
-func AiConfApprove() string { return In(i18n.Locale()).AiConfApprove() }
-
-// AiConfApprove says "Approve each edit"
-// in the language of msgs.
-func (msgs Messages) AiConfApprove() string {
-	return Catalog.Format(msgs.locale, "aiConfApprove", nil)
-}
-
-// AiConfApproveWhy says "The assistant asks before it writes a file."
-// in the language the app shows.
-func AiConfApproveWhy() string { return In(i18n.Locale()).AiConfApproveWhy() }
-
-// AiConfApproveWhy says "The assistant asks before it writes a file."
-// in the language of msgs.
-func (msgs Messages) AiConfApproveWhy() string {
-	return Catalog.Format(msgs.locale, "aiConfApproveWhy", nil)
-}
-
 // AiConfBaseURL says "Base URL"
 // in the language the app shows.
 func AiConfBaseURL() string { return In(i18n.Locale()).AiConfBaseURL() }
@@ -526,26 +506,6 @@ func (msgs Messages) AiConfBaseURLWhy() string {
 	return Catalog.Format(msgs.locale, "aiConfBaseURLWhy", nil)
 }
 
-// AiConfBash says "Allow commands"
-// in the language the app shows.
-func AiConfBash() string { return In(i18n.Locale()).AiConfBash() }
-
-// AiConfBash says "Allow commands"
-// in the language of msgs.
-func (msgs Messages) AiConfBash() string {
-	return Catalog.Format(msgs.locale, "aiConfBash", nil)
-}
-
-// AiConfBashWhy says "The assistant may run shell commands, each approved first."
-// in the language the app shows.
-func AiConfBashWhy() string { return In(i18n.Locale()).AiConfBashWhy() }
-
-// AiConfBashWhy says "The assistant may run shell commands, each approved first."
-// in the language of msgs.
-func (msgs Messages) AiConfBashWhy() string {
-	return Catalog.Format(msgs.locale, "aiConfBashWhy", nil)
-}
-
 // AiConfDrop says "Drop this model"
 // in the language the app shows.
 func AiConfDrop() string { return In(i18n.Locale()).AiConfDrop() }
@@ -554,6 +514,218 @@ func AiConfDrop() string { return In(i18n.Locale()).AiConfDrop() }
 // in the language of msgs.
 func (msgs Messages) AiConfDrop() string {
 	return Catalog.Format(msgs.locale, "aiConfDrop", nil)
+}
+
+// AiConfPermissions says "Permissions"
+// in the language the app shows.
+func AiConfPermissions() string { return In(i18n.Locale()).AiConfPermissions() }
+
+// AiConfPermissions says "Permissions"
+// in the language of msgs.
+func (msgs Messages) AiConfPermissions() string {
+	return Catalog.Format(msgs.locale, "aiConfPermissions", nil)
+}
+
+// AiConfPermissionsWhy says "What the assistant may do in this folder without asking."
+// in the language the app shows.
+func AiConfPermissionsWhy() string { return In(i18n.Locale()).AiConfPermissionsWhy() }
+
+// AiConfPermissionsWhy says "What the assistant may do in this folder without asking."
+// in the language of msgs.
+func (msgs Messages) AiConfPermissionsWhy() string {
+	return Catalog.Format(msgs.locale, "aiConfPermissionsWhy", nil)
+}
+
+// AiConfPermissionRisk says "Full access: the assistant edits files and runs commands without asking."
+// in the language the app shows.
+func AiConfPermissionRisk() string { return In(i18n.Locale()).AiConfPermissionRisk() }
+
+// AiConfPermissionRisk says "Full access: the assistant edits files and runs commands without asking."
+// in the language of msgs.
+func (msgs Messages) AiConfPermissionRisk() string {
+	return Catalog.Format(msgs.locale, "aiConfPermissionRisk", nil)
+}
+
+// AiAttach says "Attach a file"
+// in the language the app shows.
+func AiAttach() string { return In(i18n.Locale()).AiAttach() }
+
+// AiAttach says "Attach a file"
+// in the language of msgs.
+func (msgs Messages) AiAttach() string {
+	return Catalog.Format(msgs.locale, "aiAttach", nil)
+}
+
+// AiAttachBinary says "{name} is neither text nor a picture, so it cannot come with a question."
+// in the language the app shows.
+func AiAttachBinary(name string) string { return In(i18n.Locale()).AiAttachBinary(name) }
+
+// AiAttachBinary says "{name} is neither text nor a picture, so it cannot come with a question."
+// in the language of msgs.
+func (msgs Messages) AiAttachBinary(name string) string {
+	return Catalog.Format(msgs.locale, "aiAttachBinary", map[string]any{"name": name})
+}
+
+// AiAttachFolder says "{path} is a folder: a question takes files, one by one."
+// in the language the app shows.
+func AiAttachFolder(path string) string { return In(i18n.Locale()).AiAttachFolder(path) }
+
+// AiAttachFolder says "{path} is a folder: a question takes files, one by one."
+// in the language of msgs.
+func (msgs Messages) AiAttachFolder(path string) string {
+	return Catalog.Format(msgs.locale, "aiAttachFolder", map[string]any{"path": path})
+}
+
+// AiAttachFull says "A question takes {count} files at most."
+// in the language the app shows.
+func AiAttachFull(count string) string { return In(i18n.Locale()).AiAttachFull(count) }
+
+// AiAttachFull says "A question takes {count} files at most."
+// in the language of msgs.
+func (msgs Messages) AiAttachFull(count string) string {
+	return Catalog.Format(msgs.locale, "aiAttachFull", map[string]any{"count": count})
+}
+
+// AiAttachOpen says "Attach"
+// in the language the app shows.
+func AiAttachOpen() string { return In(i18n.Locale()).AiAttachOpen() }
+
+// AiAttachOpen says "Attach"
+// in the language of msgs.
+func (msgs Messages) AiAttachOpen() string {
+	return Catalog.Format(msgs.locale, "aiAttachOpen", nil)
+}
+
+// AiAttachTooBig says "{name} is too big: {limit} at most."
+// in the language the app shows.
+func AiAttachTooBig(name string, limit string) string {
+	return In(i18n.Locale()).AiAttachTooBig(name, limit)
+}
+
+// AiAttachTooBig says "{name} is too big: {limit} at most."
+// in the language of msgs.
+func (msgs Messages) AiAttachTooBig(name string, limit string) string {
+	return Catalog.Format(msgs.locale, "aiAttachTooBig", map[string]any{"name": name, "limit": limit})
+}
+
+// AiPermAsk says "Ask every time"
+// in the language the app shows.
+func AiPermAsk() string { return In(i18n.Locale()).AiPermAsk() }
+
+// AiPermAsk says "Ask every time"
+// in the language of msgs.
+func (msgs Messages) AiPermAsk() string {
+	return Catalog.Format(msgs.locale, "aiPermAsk", nil)
+}
+
+// AiPermAskWhy says "A card before every edit and every command."
+// in the language the app shows.
+func AiPermAskWhy() string { return In(i18n.Locale()).AiPermAskWhy() }
+
+// AiPermAskWhy says "A card before every edit and every command."
+// in the language of msgs.
+func (msgs Messages) AiPermAskWhy() string {
+	return Catalog.Format(msgs.locale, "aiPermAskWhy", nil)
+}
+
+// AiPermConfirmAllow says "Allow"
+// in the language the app shows.
+func AiPermConfirmAllow() string { return In(i18n.Locale()).AiPermConfirmAllow() }
+
+// AiPermConfirmAllow says "Allow"
+// in the language of msgs.
+func (msgs Messages) AiPermConfirmAllow() string {
+	return Catalog.Format(msgs.locale, "aiPermConfirmAllow", nil)
+}
+
+// AiPermConfirmBody says "The assistant will change the files of this folder and run commands without asking you first. Do it in a folder you t…"
+// in the language the app shows.
+func AiPermConfirmBody() string { return In(i18n.Locale()).AiPermConfirmBody() }
+
+// AiPermConfirmBody says "The assistant will change the files of this folder and run commands without asking you first. Do it in a folder you t…"
+// in the language of msgs.
+func (msgs Messages) AiPermConfirmBody() string {
+	return Catalog.Format(msgs.locale, "aiPermConfirmBody", nil)
+}
+
+// AiPermConfirmTitle says "Allow full access?"
+// in the language the app shows.
+func AiPermConfirmTitle() string { return In(i18n.Locale()).AiPermConfirmTitle() }
+
+// AiPermConfirmTitle says "Allow full access?"
+// in the language of msgs.
+func (msgs Messages) AiPermConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "aiPermConfirmTitle", nil)
+}
+
+// AiPermFullAccess says "Full access"
+// in the language the app shows.
+func AiPermFullAccess() string { return In(i18n.Locale()).AiPermFullAccess() }
+
+// AiPermFullAccess says "Full access"
+// in the language of msgs.
+func (msgs Messages) AiPermFullAccess() string {
+	return Catalog.Format(msgs.locale, "aiPermFullAccess", nil)
+}
+
+// AiPermFullAccessWhy says "Edits files and runs commands without asking."
+// in the language the app shows.
+func AiPermFullAccessWhy() string { return In(i18n.Locale()).AiPermFullAccessWhy() }
+
+// AiPermFullAccessWhy says "Edits files and runs commands without asking."
+// in the language of msgs.
+func (msgs Messages) AiPermFullAccessWhy() string {
+	return Catalog.Format(msgs.locale, "aiPermFullAccessWhy", nil)
+}
+
+// AiPermReadOnly says "Read only"
+// in the language the app shows.
+func AiPermReadOnly() string { return In(i18n.Locale()).AiPermReadOnly() }
+
+// AiPermReadOnly says "Read only"
+// in the language of msgs.
+func (msgs Messages) AiPermReadOnly() string {
+	return Catalog.Format(msgs.locale, "aiPermReadOnly", nil)
+}
+
+// AiPermReadOnlyWhy says "Reads and searches; changes and runs nothing."
+// in the language the app shows.
+func AiPermReadOnlyWhy() string { return In(i18n.Locale()).AiPermReadOnlyWhy() }
+
+// AiPermReadOnlyWhy says "Reads and searches; changes and runs nothing."
+// in the language of msgs.
+func (msgs Messages) AiPermReadOnlyWhy() string {
+	return Catalog.Format(msgs.locale, "aiPermReadOnlyWhy", nil)
+}
+
+// AiPermTitle says "Permissions"
+// in the language the app shows.
+func AiPermTitle() string { return In(i18n.Locale()).AiPermTitle() }
+
+// AiPermTitle says "Permissions"
+// in the language of msgs.
+func (msgs Messages) AiPermTitle() string {
+	return Catalog.Format(msgs.locale, "aiPermTitle", nil)
+}
+
+// AiPermWorkspaceWrite says "Edit this folder"
+// in the language the app shows.
+func AiPermWorkspaceWrite() string { return In(i18n.Locale()).AiPermWorkspaceWrite() }
+
+// AiPermWorkspaceWrite says "Edit this folder"
+// in the language of msgs.
+func (msgs Messages) AiPermWorkspaceWrite() string {
+	return Catalog.Format(msgs.locale, "aiPermWorkspaceWrite", nil)
+}
+
+// AiPermWorkspaceWriteWhy says "Edits files here directly; commands still ask."
+// in the language the app shows.
+func AiPermWorkspaceWriteWhy() string { return In(i18n.Locale()).AiPermWorkspaceWriteWhy() }
+
+// AiPermWorkspaceWriteWhy says "Edits files here directly; commands still ask."
+// in the language of msgs.
+func (msgs Messages) AiPermWorkspaceWriteWhy() string {
+	return Catalog.Format(msgs.locale, "aiPermWorkspaceWriteWhy", nil)
 }
 
 // AiConfExtra says "Extra instructions"

@@ -277,7 +277,7 @@ func TestTheAssistantUsesTheFolderTools(t *testing.T) {
 	for _, tool := range got.Tools {
 		names = append(names, tool.Name)
 	}
-	if strings.Join(names, " ") != "read glob grep write edit open_file" {
+	if strings.Join(names, " ") != "read glob grep write edit bash open_file" {
 		t.Errorf("the tools are %q", names)
 	}
 	if got.Model.ID != "faux-1" || got.APIKey != "test-key" {
@@ -432,32 +432,49 @@ func TestARunThatRunsOutOfStepsSaysSo(t *testing.T) {
 	}
 }
 
-func TestCommandsComeOnlyWhenTheyAreAllowed(t *testing.T) {
+// TestCommandsComeWithEveryPermissionButReadOnly: a folder only looked at
+// is read and searched, and the other permissions offer a command, which
+// each shows its card first.
+func TestCommandsComeWithEveryPermissionButReadOnly(t *testing.T) {
 	hs := newHarness(t, true)
 	a := hs.a
-	a.target = func() (piai.Model, string, error) {
-		return piai.Model{ID: "faux-1", API: "faux"}, "test-key", nil
-	}
-	var had bool
-	a.loop = func(ctx context.Context, r ai.Run, onStep func(ai.Step)) ([]piai.Message, error) {
-		for _, tool := range r.Tools {
+	for _, tc := range []struct {
+		perm string
+		bash bool
+	}{
+		{settings.PermReadOnly, false},
+		{settings.PermAsk, true},
+		{settings.PermWorkspaceWrite, true},
+		{settings.PermFullAccess, true},
+	} {
+		a.settings.AI.Permissions = tc.perm
+		var had bool
+		for _, tool := range a.aiTools().Sets() {
 			had = had || tool.Name == "bash"
 		}
-		return nil, nil
+		if had != tc.bash {
+			t.Errorf("under %q bash is offered %v", tc.perm, had)
+		}
 	}
-	hs.ask("run the tests")
-	if had {
-		t.Error("bash is offered without ai.allowBash")
-	}
+}
 
-	a.settings.AI.AllowBash = true
-	had = false
-	hs.tt.Type("and now run them")
-	hs.settle()
-	hs.tt.TypeKey(0, ui.KeyEnter, "\r")
-	hs.settle()
-	if !had {
-		t.Error("bash is not offered with ai.allowBash")
+// TestAWriteOfTheFolderIsNotAskedUnderWorkspaceWrite: the wrapper of a
+// permission that lets edits through says yes to a write, and a folder of
+// full access is not asked at all.
+func TestAWriteOfTheFolderIsNotAskedUnderWorkspaceWrite(t *testing.T) {
+	hs := newHarness(t, true)
+	a := hs.a
+	write := ai.Change{Path: filepath.Join(a.root, "a.go"), After: []byte("package a\n")}
+	if !a.askCommand(write) {
+		t.Error("a write of the folder was sent back under workspace-write")
+	}
+	a.settings.AI.Permissions = settings.PermFullAccess
+	if a.aiTools().Approve != nil {
+		t.Error("full access still asks before a write")
+	}
+	a.settings.AI.Permissions = settings.PermWorkspaceWrite
+	if a.aiTools().Approve == nil {
+		t.Error("workspace-write asks before nothing at all")
 	}
 }
 

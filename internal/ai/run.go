@@ -29,6 +29,9 @@ type Run struct {
 	Messages []core.Message
 	Tools    []agent.AgentTool
 	Stream   agent.StreamFn
+	// Pictures are the pictures the question comes with, which the model
+	// is shown after its text.
+	Pictures []Picture
 }
 
 // Loop asks the model, runs the tools it calls, and asks again with
@@ -76,7 +79,7 @@ func Loop(ctx context.Context, r Run, onStep func(Step)) ([]core.Message, error)
 			onStep(Step{ToolCalls: []string{e.ToolName}})
 		}
 	})
-	msgs, err := a.Run(ctx, core.UserMessage{Role: "user", Content: r.Prompt})
+	msgs, err := a.Run(ctx, userMessage(r))
 	if err != nil {
 		return msgs, err
 	}

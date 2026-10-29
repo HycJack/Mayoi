@@ -206,6 +206,30 @@ func TestBashIsNotOfferedUnlessCommandsAreAllowed(t *testing.T) {
 	}
 }
 
+// TestReadOnlyOffersNoWrite: a folder the assistant may only look at comes
+// with the tools that look, and none that change it.
+func TestReadOnlyOffersNoWrite(t *testing.T) {
+	tools := &Tools{
+		Root:     aFolder(t),
+		ReadOnly: true,
+		Exec:     func(ctx context.Context, dir, command string) (string, error) { return "ok", nil },
+	}
+	names := map[string]bool{}
+	for _, tool := range tools.Sets() {
+		names[tool.Name] = true
+	}
+	for _, name := range []string{"write", "edit", "bash"} {
+		if names[name] {
+			t.Errorf("a read-only folder offers %q", name)
+		}
+	}
+	for _, name := range []string{"read", "grep", "glob"} {
+		if !names[name] {
+			t.Errorf("a read-only folder does not offer %q", name)
+		}
+	}
+}
+
 func TestBashAsksWithTheCommand(t *testing.T) {
 	var asked Change
 	tools := &Tools{
