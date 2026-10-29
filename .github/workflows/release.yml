@@ -90,6 +90,13 @@ jobs:
         env:
           MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
         run: test -n "$MYGO_UPDATER_PRIVATE_KEY" || { echo "::error::MYGO_UPDATER_PRIVATE_KEY is not set"; exit 1; }
+      # The updates of this build come from the repository that built it, so
+      # that a fork's build looks at its own releases and not the ones of
+      # the repository Mayoi came from.
+      - name: Point the updates at this repository
+        run: |
+          jq --arg repo "$GITHUB_REPOSITORY" '.updates.github = $repo' mygo.json > "$RUNNER_TEMP/mygo.json"
+          mv "$RUNNER_TEMP/mygo.json" mygo.json
       # -upload adds the installers, the install script and the updates to
       # the draft release, then the update manifests, so that they never
       # point at a file that isn't there. The disk images and installers

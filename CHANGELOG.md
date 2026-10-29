@@ -19,6 +19,7 @@ needs a `## <version>` section here, or its build fails.
 - **Edit this folder** writes without a card and still asks before a command; **Full access** asks nothing.
 - The permission is picked in **AI Settings** or under the question, and **Full access** asks before it is given.
 - `ai.approveEdits` and `ai.allowBash` of an older `settings.json` become the preset they meant.
+- Updates come from this repository's releases, not from the repository Mayoi came from.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
 - Each answer is kept in `ai-sessions/`, named after the first question: the list in the panel's head opens one.
 - **New Chat** in the panel's head starts another conversation, and the old one stays in the list.
