@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"mayoi/internal/ai"
 	"mayoi/internal/bg"
 	"mayoi/internal/settings"
@@ -252,7 +253,7 @@ func (a *app) fetchAIModels() {
 			a.post(func() {
 				c.fetching = false
 				if err != nil {
-					c.fetch, c.failed = a.aiSaid(err), true
+					c.fetch, c.failed = a.aiFetchSaid(err), true
 					return
 				}
 				c.listed, c.failed = models, false
@@ -267,6 +268,23 @@ func (a *app) fetchAIModels() {
 			})
 		})
 	}()
+}
+
+// aiFetchSaid is what the dialog says when the endpoint would not list its
+// models: a gateway is often not asked for them at all, which is no reason
+// to stop the user, so those answers point at the field instead of at a
+// failure.
+func (a *app) aiFetchSaid(err error) string {
+	var fe *ai.FetchError
+	if errors.As(err, &fe) {
+		switch {
+		case strings.HasPrefix(fe.Status, "404"), strings.HasPrefix(fe.Status, "405"),
+			strings.HasPrefix(fe.Status, "501"), fe.Status == "", fe.Reason == "no models in the answer":
+			return locales.AiConfNoModelList()
+		}
+		return locales.AiConfFetchRefused(fe.Status)
+	}
+	return a.aiSaid(err)
 }
 
 // aiConfShown is the models the dialog lists: those matching what was
@@ -547,11 +565,14 @@ func (a *app) aiConfModels(c *ui.Context, conf *aiSettings) {
 			a.post(a.fetchAIModels)
 		}
 		if conf.fetch != "" {
-			why := p.muted
+			// A failure says what to do instead, which is worth the two
+			// lines it takes; what worked is said on one.
+			said := ui.Text(c, conf.fetch).FontSize(11).TextColor(p.muted).Shrink(1)
 			if conf.failed {
-				why = p.dangerText
+				said.TextColor(p.dangerText)
+			} else {
+				said.SingleLine()
 			}
-			ui.Text(c, conf.fetch).FontSize(11).TextColor(why).SingleLine().Shrink(1)
 		}
 	})
 	if len(conf.listed) > a.aiConfRowCount() {

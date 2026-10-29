@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -78,6 +79,9 @@ type aiPanel struct {
 	listed []ai.Chat
 	// menu says the list of voices is open.
 	menu bool
+	// models says the list of models is open, which changes the one that
+	// answers without the dialog.
+	models bool
 	// perms says the list of permissions is open, and permAsk the one the
 	// user is being asked to allow, which full access alone needs.
 	perms   bool
@@ -147,10 +151,15 @@ func (p *aiPanel) running() bool {
 }
 
 // aiSaid is what the panel says of a failure: the one it knows, in the
-// words of the locale, or the failure wrapped.
+// words of the locale, or the failure wrapped. A gateway refuses a key or
+// says it has never heard of a model in its own words, which a user cannot
+// act on, so the failures they cause are said by what the user can fix.
 func (a *app) aiSaid(err error) string {
 	var noKey aiNoKey
 	var noModel aiNoModel
+	var auth *core.AuthError
+	var busy *core.RateLimitError
+	var unreachable *core.NetworkError
 	switch {
 	case errors.As(err, &noKey) && noKey.wanted:
 		return locales.AiNoKeyFor(ai.DisplayName(noKey.protocol))
@@ -158,8 +167,72 @@ func (a *app) aiSaid(err error) string {
 		return locales.AiNoKey()
 	case errors.As(err, &noModel):
 		return locales.AiNoModel()
+	case errors.As(err, &auth):
+		return locales.AiKeyRefused()
+	case errors.As(err, &busy):
+		return locales.AiEndpointBusy()
+	case errors.As(err, &unreachable):
+		return locales.AiEndpointUnreachable(causeOf(unreachable))
+	}
+	// The statuses pi-ai-go passes on as they were said: a model it has
+	// never heard of, and a key it will not take, arrive here.
+	if status, said, ok := apiRefusal(err); ok {
+		switch {
+		case status == http.StatusUnauthorized, status == http.StatusForbidden:
+			return locales.AiKeyRefused()
+		case status == http.StatusTooManyRequests:
+			return locales.AiEndpointBusy()
+		case status == http.StatusNotFound, status == http.StatusBadRequest && unknownModel(said):
+			return locales.AiModelUnknown(a.settings.AI.Model)
+		}
 	}
 	return locales.AiChatFailed(err.Error())
+}
+
+// apiRefusal is a failure that says the status of an answer and what came
+// with it, as "openai: API error 404: {…}" does.
+func apiRefusal(err error) (status int, said string, ok bool) {
+	s := err.Error()
+	i := strings.Index(s, "API error ")
+	if i < 0 {
+		return 0, "", false
+	}
+	rest := s[i+len("API error "):]
+	head, said := rest, ""
+	if j := strings.IndexByte(rest, ':'); j >= 0 {
+		head, said = rest[:j], strings.TrimSpace(rest[j+1:])
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(head))
+	if err != nil {
+		return 0, "", false
+	}
+	return n, said, true
+}
+
+// unknownModel says what an endpoint answered that names a model it does
+// not have, which is what a name typed one letter wrong meets.
+func unknownModel(said string) bool {
+	said = strings.ToLower(said)
+	if !strings.Contains(said, "model") {
+		return false
+	}
+	for _, word := range []string{"not found", "not exist", "unknown", "no such", "invalid model"} {
+		if strings.Contains(said, word) {
+			return true
+		}
+	}
+	return false
+}
+
+// causeOf is what a failure says under its own name, which is what the
+// user can act on: the address it could not reach, and why.
+func causeOf(err error) string {
+	if e, ok := err.(interface{ Unwrap() error }); ok {
+		if cause := e.Unwrap(); cause != nil && cause.Error() != "" {
+			return cause.Error()
+		}
+	}
+	return err.Error()
 }
 
 // stop is the command that stops the answer under way.
@@ -450,7 +523,7 @@ func (a *app) aiOpenPath() string {
 // time: the other closes, and the voice chosen does not decide this one.
 func (a *app) togglePersonas() {
 	a.ai.menu = !a.ai.menu
-	a.ai.chats, a.ai.perms = false, false
+	a.ai.chats, a.ai.perms, a.ai.models = false, false, false
 	a.invalidate()
 }
 
@@ -810,6 +883,7 @@ func (a *app) aiSidePanel(c *ui.Context) {
 	a.personaMenu(c)
 	a.aiPermissionMenu(c)
 	a.aiPermissionConfirm(c)
+	a.aiModelMenu(c)
 }
 
 // aiTitleRow is the head of the assistant's panel: its name, the new
@@ -832,6 +906,7 @@ func (a *app) aiTitleRow(c *ui.Context) {
 		if a.iconButton(c, iconSparkles, locales.AiPersonaButton(), false).Clicked() {
 			a.post(a.togglePersonas)
 		}
+		a.aiModelButton(c)
 		if a.iconButton(c, iconSettings, locales.AiConfTitle(), false).Clicked() {
 			a.post(a.openAISettings)
 		}
@@ -843,7 +918,7 @@ func (a *app) aiTitleRow(c *ui.Context) {
 func (a *app) toggleChats() {
 	p := &a.ai
 	p.chats = !p.chats
-	p.menu, p.perms = false, false
+	p.menu, p.perms, p.models = false, false, false
 	p.listed = nil
 	a.invalidate()
 	if !p.chats {

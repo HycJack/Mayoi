@@ -376,6 +376,78 @@ func (msgs Messages) AiChatFailed(error string) string {
 	return Catalog.Format(msgs.locale, "aiChatFailed", map[string]any{"error": error})
 }
 
+// AiKeyRefused says "The endpoint refused the key. Check the key in AI Settings."
+// in the language the app shows.
+func AiKeyRefused() string { return In(i18n.Locale()).AiKeyRefused() }
+
+// AiKeyRefused says "The endpoint refused the key. Check the key in AI Settings."
+// in the language of msgs.
+func (msgs Messages) AiKeyRefused() string {
+	return Catalog.Format(msgs.locale, "aiKeyRefused", nil)
+}
+
+// AiModelUnknown says "The endpoint does not know the model {model}. Check its name in AI Settings."
+// in the language the app shows.
+func AiModelUnknown(model string) string { return In(i18n.Locale()).AiModelUnknown(model) }
+
+// AiModelUnknown says "The endpoint does not know the model {model}. Check its name in AI Settings."
+// in the language of msgs.
+func (msgs Messages) AiModelUnknown(model string) string {
+	return Catalog.Format(msgs.locale, "aiModelUnknown", map[string]any{"model": model})
+}
+
+// AiEndpointBusy says "The endpoint is busy. Try again in a moment."
+// in the language the app shows.
+func AiEndpointBusy() string { return In(i18n.Locale()).AiEndpointBusy() }
+
+// AiEndpointBusy says "The endpoint is busy. Try again in a moment."
+// in the language of msgs.
+func (msgs Messages) AiEndpointBusy() string {
+	return Catalog.Format(msgs.locale, "aiEndpointBusy", nil)
+}
+
+// AiEndpointUnreachable says "The endpoint could not be reached: {reason}"
+// in the language the app shows.
+func AiEndpointUnreachable(reason string) string {
+	return In(i18n.Locale()).AiEndpointUnreachable(reason)
+}
+
+// AiEndpointUnreachable says "The endpoint could not be reached: {reason}"
+// in the language of msgs.
+func (msgs Messages) AiEndpointUnreachable(reason string) string {
+	return Catalog.Format(msgs.locale, "aiEndpointUnreachable", map[string]any{"reason": reason})
+}
+
+// AiModelTitle says "Model"
+// in the language the app shows.
+func AiModelTitle() string { return In(i18n.Locale()).AiModelTitle() }
+
+// AiModelTitle says "Model"
+// in the language of msgs.
+func (msgs Messages) AiModelTitle() string {
+	return Catalog.Format(msgs.locale, "aiModelTitle", nil)
+}
+
+// AiModelNone says "No model kept yet: add one in AI Settings."
+// in the language the app shows.
+func AiModelNone() string { return In(i18n.Locale()).AiModelNone() }
+
+// AiModelNone says "No model kept yet: add one in AI Settings."
+// in the language of msgs.
+func (msgs Messages) AiModelNone() string {
+	return Catalog.Format(msgs.locale, "aiModelNone", nil)
+}
+
+// AiModelMore says "Add or change models…"
+// in the language the app shows.
+func AiModelMore() string { return In(i18n.Locale()).AiModelMore() }
+
+// AiModelMore says "Add or change models…"
+// in the language of msgs.
+func (msgs Messages) AiModelMore() string {
+	return Catalog.Format(msgs.locale, "aiModelMore", nil)
+}
+
 // AiCopiedAnswer says "Copied the answer"
 // in the language the app shows.
 func AiCopiedAnswer() string { return In(i18n.Locale()).AiCopiedAnswer() }
@@ -976,6 +1048,26 @@ func AiConfModelPlaceholder() string { return In(i18n.Locale()).AiConfModelPlace
 // in the language of msgs.
 func (msgs Messages) AiConfModelPlaceholder() string {
 	return Catalog.Format(msgs.locale, "aiConfModelPlaceholder", nil)
+}
+
+// AiConfNoModelList says "This endpoint lists no models. Type the name below and save."
+// in the language the app shows.
+func AiConfNoModelList() string { return In(i18n.Locale()).AiConfNoModelList() }
+
+// AiConfNoModelList says "This endpoint lists no models. Type the name below and save."
+// in the language of msgs.
+func (msgs Messages) AiConfNoModelList() string {
+	return Catalog.Format(msgs.locale, "aiConfNoModelList", nil)
+}
+
+// AiConfFetchRefused says "The endpoint would not list its models ({status}). A name typed below works."
+// in the language the app shows.
+func AiConfFetchRefused(status string) string { return In(i18n.Locale()).AiConfFetchRefused(status) }
+
+// AiConfFetchRefused says "The endpoint would not list its models ({status}). A name typed below works."
+// in the language of msgs.
+func (msgs Messages) AiConfFetchRefused(status string) string {
+	return Catalog.Format(msgs.locale, "aiConfFetchRefused", map[string]any{"status": status})
 }
 
 // AiConfModelType says "Type one"

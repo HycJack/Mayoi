@@ -92,7 +92,7 @@ func (a *app) aiPermissionButton(c *ui.Context) {
 func (a *app) togglePermissions() {
 	p := &a.ai
 	p.perms = !p.perms
-	p.menu, p.chats = false, false
+	p.menu, p.chats, p.models = false, false, false
 	a.invalidate()
 }
 

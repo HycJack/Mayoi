@@ -26,6 +26,9 @@ needs a `## <version>` section here, or its build fails.
 - A command the assistant runs has 120 seconds, not 60, and `ai.commandTimeout` says how many.
 - Updates come from this repository's releases, not from the repository Mayoi came from.
 - A model typed in **AI Settings** is kept by **Save**, and the dialog says which one answers.
+- The panel's head picks the model that answers, from the ones the settings keep.
+- An endpoint that lists no models says so in **AI Settings**, and a typed name still saves.
+- A key an endpoint refuses, or a model it does not know, is said as what to change, with the way there.
 - API keys live in `ai-keys.json` beside `settings.json`, so the account syncs the settings without them.
 - Each answer is kept in `ai-sessions/`, named after the first question: the list in the panel's head opens one.
 - **New Chat** in the panel's head starts another conversation, and the old one stays in the list.
